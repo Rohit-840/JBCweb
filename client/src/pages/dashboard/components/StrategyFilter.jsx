@@ -118,12 +118,22 @@ function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
 }
 
 /* ── Main component ── */
-export default function StrategyFilter({ data, activeStrategy, onStrategyChange }) {
-  const [popup, setPopup]               = useState(null);
-  const [volumeFilter, setVolumeFilter] = useState("");
+export default function StrategyFilter({
+  data, activeStrategy, onStrategyChange,
+  availableVolumes = [], volumeFilter = [], onVolumeFilterChange,
+}) {
+  const [popup, setPopup]                   = useState(null);
+  const [popupVolume, setPopupVolume]       = useState("");
 
-  // Reset volume filter whenever a new symbol popup opens
-  useEffect(() => { setVolumeFilter(""); }, [popup]);
+  // Reset popup volume filter when symbol changes
+  useEffect(() => { setPopupVolume(""); }, [popup]);
+
+  const toggleStrategyVolume = (vol) => {
+    onVolumeFilterChange((prev) => {
+      const idx = prev.findIndex((v) => Math.abs(v - vol) < 0.0001);
+      return idx !== -1 ? prev.filter((_, i) => i !== idx) : [...prev, vol];
+    });
+  };
 
   const handleStrategy = (name) => {
     onStrategyChange(activeStrategy === name ? null : name);
@@ -148,12 +158,12 @@ export default function StrategyFilter({ data, activeStrategy, onStrategyChange 
 
   /* Volume-filtered history — drives table, chart AND stats */
   const displayHistory = useMemo(() => {
-    const raw = volumeFilter.trim();
+    const raw = popupVolume.trim();
     if (!raw) return symbolHistory;
     const vol = parseFloat(raw);
     if (isNaN(vol)) return symbolHistory;
     return symbolHistory.filter((h) => Math.abs(h.volume - vol) < 0.0001);
-  }, [symbolHistory, volumeFilter]);
+  }, [symbolHistory, popupVolume]);
 
   const isFiltered  = displayHistory.length !== symbolHistory.length;
   const stats       = useMemo(() => calcStats(displayHistory), [displayHistory]);
@@ -201,17 +211,62 @@ export default function StrategyFilter({ data, activeStrategy, onStrategyChange 
         </div>
 
         {activeStrategy && (
-          <div className="flex gap-2 mt-3 pt-3 border-t border-white/5">
-            {STRATEGIES[activeStrategy].map((sym) => (
-              <button
-                key={sym}
-                onClick={() => setPopup(sym)}
-                className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs
-                  text-gray-300 hover:border-yellow-500/30 hover:text-yellow-400 transition-all"
-              >
-                {sym}
-              </button>
-            ))}
+          <div className="mt-3 pt-3 border-t border-white/5 space-y-2.5">
+            {/* Symbol chips */}
+            <div className="flex gap-2 flex-wrap">
+              {STRATEGIES[activeStrategy].map((sym) => (
+                <button
+                  key={sym}
+                  onClick={() => setPopup(sym)}
+                  className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs
+                    text-gray-300 hover:border-yellow-500/30 hover:text-yellow-400 transition-all"
+                >
+                  {sym}
+                </button>
+              ))}
+            </div>
+
+            {/* Strategy-level volume multi-select */}
+            {availableVolumes.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[9px] text-gray-600 uppercase tracking-widest shrink-0">
+                  Vol Filter
+                </span>
+                {availableVolumes.map((vol) => {
+                  const selIdx = volumeFilter.findIndex((v) => Math.abs(v - vol) < 0.0001);
+                  const selected = selIdx !== -1;
+                  return (
+                    <button
+                      key={vol}
+                      onClick={() => toggleStrategyVolume(vol)}
+                      className={`relative px-2.5 py-0.5 rounded-lg text-[10px] font-semibold border
+                        transition-all duration-150
+                        ${selected
+                          ? "bg-yellow-500/15 border-yellow-500/40 text-yellow-400"
+                          : "bg-white/[0.03] border-white/10 text-gray-500 hover:text-gray-300 hover:border-white/20"
+                        }`}
+                    >
+                      {selected && (
+                        <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-yellow-500
+                          text-black text-[7px] font-black rounded-full flex items-center justify-center leading-none">
+                          {selIdx + 1}
+                        </span>
+                      )}
+                      {vol}
+                    </button>
+                  );
+                })}
+                {volumeFilter.length > 0 && (
+                  <button
+                    onClick={() => onVolumeFilterChange([])}
+                    className="px-2 py-0.5 rounded-lg text-[9px] border border-white/10
+                      text-gray-600 hover:text-gray-400 hover:border-white/20 transition-all"
+                  >
+                    clear
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -241,7 +296,7 @@ export default function StrategyFilter({ data, activeStrategy, onStrategyChange 
                   {isFiltered && (
                     <span className="text-[10px] px-2.5 py-1 rounded-full bg-yellow-500/10
                       border border-yellow-500/30 text-yellow-400 font-semibold tracking-wide">
-                      Vol {volumeFilter} · {displayHistory.length}/{symbolHistory.length} trades
+                      Vol {popupVolume} · {displayHistory.length}/{symbolHistory.length} trades
                     </span>
                   )}
                 </div>
@@ -335,8 +390,8 @@ export default function StrategyFilter({ data, activeStrategy, onStrategyChange 
                   {/* Volume filter */}
                   <VolumeFilter
                     symbolHistory={symbolHistory}
-                    volumeFilter={volumeFilter}
-                    setVolumeFilter={setVolumeFilter}
+                    volumeFilter={popupVolume}
+                    setVolumeFilter={setPopupVolume}
                   />
 
                   {/* Trade breakdown — updates with volume filter */}
@@ -366,14 +421,14 @@ export default function StrategyFilter({ data, activeStrategy, onStrategyChange 
                       {popup} Performance
                       {isFiltered && (
                         <span className="text-yellow-400/70 font-normal ml-1">
-                          · vol {volumeFilter}
+                          · vol {popupVolume}
                         </span>
                       )}
                     </p>
 
                     {/* key forces smooth remount when filter changes */}
                     <div
-                      key={`${popup}-${volumeFilter}`}
+                      key={`${popup}-${popupVolume}`}
                       className="transition-opacity duration-300"
                     >
                       <SymbolChart history={displayHistory} height={190} />

@@ -7,7 +7,15 @@ html, body, #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
+
+/* Lift the dimmest label text so it's actually readable on dark backgrounds */
+.text-gray-600 { color: #71717a !important; }   /* zinc-500 — up from near-invisible */
+.text-gray-700 { color: #52525b !important; }   /* zinc-600 — for empty states */
 
 /* ── Custom scrollbar ── */
 ::-webkit-scrollbar {

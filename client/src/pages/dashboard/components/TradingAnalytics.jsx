@@ -11,9 +11,9 @@ function Bar({ value, max = 100 }) {
 }
 
 export default function TradingAnalytics({ analytics, openCount, strategyName }) {
-  const winRate      = analytics?.win_rate      ?? 0;
-  const avgProfit    = analytics?.avg_profit    ?? 0;
-  const tradesClosed = analytics?.total_trades  ?? 0;
+  const winRate      = analytics?.win_rate     ?? 0;
+  const totalPnl     = analytics?.total_pnl    ?? 0;
+  const tradesClosed = analytics?.total_trades ?? 0;
 
   const isFiltered = !!strategyName;
 
@@ -35,12 +35,12 @@ export default function TradingAnalytics({ analytics, openCount, strategyName })
 
         <div>
           <div className="flex justify-between text-xs">
-            <span className="text-gray-500 uppercase tracking-widest">Avg Profit</span>
-            <span className={`font-bold ${avgProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
-              {avgProfit >= 0 ? "+" : ""}${Math.abs(avgProfit).toFixed(2)}
+            <span className="text-gray-500 uppercase tracking-widest">Total PNL</span>
+            <span className={`font-bold ${totalPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+              {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
             </span>
           </div>
-          <Bar value={Math.min(Math.abs(avgProfit), 500)} max={500} />
+          <Bar value={Math.min(Math.abs(totalPnl), 5000)} max={5000} />
         </div>
 
         <div className="h-px bg-white/5" />

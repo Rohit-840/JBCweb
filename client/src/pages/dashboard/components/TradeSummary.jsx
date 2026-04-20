@@ -218,20 +218,35 @@ function HistoryPanel({ history, resetKey }) {
 }
 
 /* ─── Main export ─── */
-export default function TradeSummary({ trades, fullHistory, strategySymbols }) {
-  const filteredTrades = strategySymbols
+export default function TradeSummary({ trades, fullHistory, strategySymbols, strategyVolumeFilter = [] }) {
+  // Step 1: filter by strategy symbols
+  const symbolTrades = strategySymbols
     ? trades.filter((t) => strategySymbols.includes(t.symbol))
     : trades;
 
-  // full_history is already newest-first from Python; filter then slice
-  const filteredHistory = strategySymbols
+  const symbolHistory = strategySymbols
     ? fullHistory.filter((h) => strategySymbols.includes(h.symbol))
     : fullHistory;
+
+  // Step 2: apply volume filter
+  // Open trades — simple union filter
+  const filteredTrades = strategyVolumeFilter.length > 0
+    ? symbolTrades.filter((t) => strategyVolumeFilter.some((v) => Math.abs(t.volume - v) < 0.0001))
+    : symbolTrades;
+
+  // History — grouped in selection order (all vol[0] trades, then vol[1], etc.)
+  const filteredHistory = strategyVolumeFilter.length > 0
+    ? strategyVolumeFilter.flatMap((vol) =>
+        symbolHistory.filter((h) => Math.abs(h.volume - vol) < 0.0001)
+      )
+    : symbolHistory;
+
+  const resetKey = JSON.stringify(strategySymbols) + JSON.stringify(strategyVolumeFilter);
 
   return (
     <div className="flex gap-4 mt-4">
       <OpenTradesPanel trades={filteredTrades} />
-      <HistoryPanel history={filteredHistory} resetKey={JSON.stringify(strategySymbols)} />
+      <HistoryPanel history={filteredHistory} resetKey={resetKey} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import StatsCards from "../components/StatsCards.jsx";
 import StrategyFilter from "../components/StrategyFilter.jsx";
 import EquityChart from "../components/EquityChart.jsx";
@@ -8,48 +8,82 @@ import { STRATEGIES } from "../constants.js";
 
 function computeStrategyAnalytics(history) {
   const total = history.length;
-  if (total === 0) return { win_rate: 0, avg_profit: 0, total_trades: 0 };
+  if (total === 0) return { win_rate: 0, total_pnl: 0, total_trades: 0 };
   const wins = history.filter((h) => h.profit > 0);
   const sum  = history.reduce((s, h) => s + h.profit, 0);
   return {
     win_rate:     (wins.length / total) * 100,
-    avg_profit:   sum / total,
+    total_pnl:    sum,
     total_trades: total,
   };
 }
 
 export default function DashboardHome({ data, connected }) {
-  const [activeStrategy, setActiveStrategy] = useState(null);
+  const [activeStrategy, setActiveStrategy]           = useState(null);
+  const [strategyVolumeFilter, setStrategyVolumeFilter] = useState([]);
   const account = data?.account;
+
+  // Reset volume filter when strategy changes
+  useEffect(() => { setStrategyVolumeFilter([]); }, [activeStrategy]);
 
   const strategySymbols = activeStrategy ? STRATEGIES[activeStrategy] : null;
 
-  // Filter full_history by strategy symbols
+  // History filtered by strategy symbols
   const strategyHistory = useMemo(() => {
     if (!strategySymbols) return null;
     return (data?.full_history || []).filter((h) => strategySymbols.includes(h.symbol));
   }, [strategySymbols, data?.full_history]);
 
-  // Filter open trades by strategy symbols
+  // Open trades filtered by strategy symbols
   const strategyTrades = useMemo(() => {
     if (!strategySymbols) return null;
     return (data?.trades || []).filter((t) => strategySymbols.includes(t.symbol));
   }, [strategySymbols, data?.trades]);
 
-  // Build cumulative P/L series for the chart (oldest → newest)
-  const strategyChartData = useMemo(() => {
-    if (!strategyHistory || strategyHistory.length === 0) return null;
-    const sorted = [...strategyHistory].sort((a, b) => a.time - b.time);
-    let cum = 0;
-    return sorted.map((d) => ({ time: d.time * 1000, equity: (cum += d.profit) }));
+  // Unique volumes available for the current strategy (for chip list)
+  const availableStrategyVolumes = useMemo(() => {
+    if (!strategyHistory) return [];
+    const set = new Set(strategyHistory.map((h) => h.volume));
+    return [...set].sort((a, b) => a - b);
   }, [strategyHistory]);
 
-  const displayAnalytics = useMemo(
-    () => strategyHistory ? computeStrategyAnalytics(strategyHistory) : data?.analytics,
-    [strategyHistory, data?.analytics]
-  );
+  // History after applying volume filter — grouped in selection order
+  const volumeFilteredHistory = useMemo(() => {
+    if (!strategyHistory) return null;
+    if (strategyVolumeFilter.length === 0) return strategyHistory;
+    return strategyVolumeFilter.flatMap((vol) =>
+      strategyHistory.filter((h) => Math.abs(h.volume - vol) < 0.0001)
+    );
+  }, [strategyHistory, strategyVolumeFilter]);
 
-  const displayOpenCount = strategyTrades ? strategyTrades.length : (data?.trades?.length ?? 0);
+  // Open trades after volume filter
+  const volumeFilteredTrades = useMemo(() => {
+    if (!strategyTrades) return null;
+    if (strategyVolumeFilter.length === 0) return strategyTrades;
+    return strategyTrades.filter((t) =>
+      strategyVolumeFilter.some((vol) => Math.abs(t.volume - vol) < 0.0001)
+    );
+  }, [strategyTrades, strategyVolumeFilter]);
+
+  // Chart: always chronological for correct cumulative P/L
+  const strategyChartData = useMemo(() => {
+    const hist = volumeFilteredHistory;
+    if (!hist || hist.length === 0) return null;
+    const sorted = [...hist].sort((a, b) => a.time - b.time);
+    let cum = 0;
+    return sorted.map((d) => ({ time: d.time * 1000, equity: (cum += d.profit) }));
+  }, [volumeFilteredHistory]);
+
+  const displayAnalytics = useMemo(() => {
+    if (volumeFilteredHistory) return computeStrategyAnalytics(volumeFilteredHistory);
+    const base     = data?.analytics ?? {};
+    const totalPnl = (data?.full_history || []).reduce((s, h) => s + h.profit, 0);
+    return { ...base, total_pnl: totalPnl };
+  }, [volumeFilteredHistory, data?.analytics, data?.full_history]);
+
+  const displayOpenCount = volumeFilteredTrades
+    ? volumeFilteredTrades.length
+    : (data?.trades?.length ?? 0);
 
   return (
     <div className="p-5 min-h-full">
@@ -84,14 +118,17 @@ export default function DashboardHome({ data, connected }) {
       {/* Stats cards */}
       <StatsCards account={account} />
 
-      {/* Strategy filter — owns activeStrategy state */}
+      {/* Strategy filter */}
       <StrategyFilter
         data={data}
         activeStrategy={activeStrategy}
         onStrategyChange={setActiveStrategy}
+        availableVolumes={availableStrategyVolumes}
+        volumeFilter={strategyVolumeFilter}
+        onVolumeFilterChange={setStrategyVolumeFilter}
       />
 
-      {/* Equity chart + analytics — react to strategy selection */}
+      {/* Equity chart + analytics */}
       <div className="flex gap-4">
         <EquityChart
           equityHistory={data?.equityHistory}
@@ -105,11 +142,12 @@ export default function DashboardHome({ data, connected }) {
         />
       </div>
 
-      {/* Live open trades + recent history (newest 10) — filter-aware */}
+      {/* Open trades + history */}
       <TradeSummary
         trades={data?.trades || []}
         fullHistory={data?.full_history || []}
         strategySymbols={strategySymbols}
+        strategyVolumeFilter={strategyVolumeFilter}
       />
     </div>
   );
