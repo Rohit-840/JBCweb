@@ -8,3 +8,28 @@ html, body, #root {
   padding: 0;
   overflow: hidden;
 }
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #9A9493 0%, #854d0e 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 6px rgba(202, 138, 4, 0.5);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9A9493 0%, #ca8a04 100%);
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.7);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

@@ -9,23 +9,16 @@ import useWebSocket from "./hooks/useWebSocket.js";
 
 export default function Dashboard({ onLogout }) {
   const [page, setPage] = useState("dashboard");
-  const [filteredSymbols, setFilteredSymbols] = useState(null);
   const { data, connected } = useWebSocket();
 
   const renderPage = () => {
     switch (page) {
       case "dashboard":
-        return (
-          <DashboardHome
-            data={data}
-            connected={connected}
-            onFilterChange={setFilteredSymbols}
-          />
-        );
+        return <DashboardHome data={data} connected={connected} />;
       case "trades":
-        return <OpenTrades data={data} filteredSymbols={filteredSymbols} />;
+        return <OpenTrades data={data} />;
       case "history":
-        return <History data={data} filteredSymbols={filteredSymbols} />;
+        return <History data={data} />;
       case "analytics":
         return <Analytics data={data} />;
       case "profile":

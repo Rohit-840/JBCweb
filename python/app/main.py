@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket
 from app.websocket import dashboard_stream
-from app.services.mt5_service import connect_mt5, login_mt5
+from app.services.mt5_service import login_mt5
 from pydantic import BaseModel
 import MetaTrader5 as mt5
 
@@ -9,8 +9,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 def startup():
-    # Only tries to attach to a running terminal — won't fail the server if MT5 is closed
-    connect_mt5()
+    print("✅ Python MT5 bridge ready — waiting for credentials via /mt5/login")
 
 
 @app.get("/")

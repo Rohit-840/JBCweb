@@ -6,31 +6,35 @@ _session = {"login": None, "password": None, "server": None}
 
 
 def connect_mt5():
-    if not mt5.initialize():
-        code, msg = mt5.last_error()
-        print(f"❌ MT5 Initialization Failed — code {code}: {msg}")
-        print("   ⚠  Make sure MetaTrader 5 terminal is OPEN on this machine.")
-        return False
-    print("✅ MT5 terminal connection established")
-    return True
+    """
+    Startup probe only — does NOT attempt login.
+    Real authentication happens in login_mt5() once credentials arrive.
+    Error -6 (AUTH_FAILED) here is normal and expected.
+    """
+    print("⏳ MT5 startup: waiting for user credentials before connecting.")
+    return False
 
 
 def login_mt5(login: int, password: str, server: str) -> bool:
-    """Initialize MT5 and log in. Stores credentials for session restore."""
-    if not mt5.initialize():
-        code, msg = mt5.last_error()
-        print(f"❌ MT5 init failed — {code}: {msg}")
-        return False
+    """
+    Connect and authenticate in one call by passing credentials directly to
+    mt5.initialize(). This bypasses error -6 (AUTH_FAILED) which occurs when
+    calling initialize() without credentials on a terminal that requires auth.
+    """
+    # Shut down any stale connection first
+    mt5.shutdown()
 
-    if not mt5.login(login=login, password=password, server=server):
+    if not mt5.initialize(login=login, password=password, server=server):
         code, msg = mt5.last_error()
-        print(f"❌ MT5 login failed — {code}: {msg}")
+        print(f"❌ MT5 connect failed — code {code}: {msg}")
         return False
 
     _session["login"]    = login
     _session["password"] = password
     _session["server"]   = server
-    print(f"✅ MT5 logged in: {login} @ {server}")
+    acc = mt5.account_info()
+    name = acc.name if acc else "unknown"
+    print(f"✅ MT5 connected: {name} ({login}) @ {server}")
     return True
 
 
@@ -152,8 +156,55 @@ def get_live_prices(symbols):
 
 def extract_symbols(trades):
     symbols = set()
-
     for t in trades:
         symbols.add(t["symbol"])
-
     return list(symbols)
+
+
+def get_history_with_orders(days: int = 90):
+    """Returns closed trades (entry=1) enriched with SL/TP from their opening orders."""
+    to_date   = datetime.now()
+    from_date = to_date - timedelta(days=days)
+
+    all_deals = mt5.history_deals_get(from_date, to_date)
+    if all_deals is None:
+        return []
+
+    # Map position_id → opening deal
+    opening_map: dict = {}
+    for d in all_deals:
+        if d.entry == 0 and d.symbol:
+            opening_map[d.position_id] = d
+
+    # Map order ticket → order (for SL / TP)
+    all_orders = mt5.history_orders_get(from_date, to_date)
+    order_map: dict = {}
+    if all_orders is not None:
+        for o in all_orders:
+            order_map[o.ticket] = o
+
+    result = []
+    for d in all_deals:
+        if d.entry != 1 or not d.symbol:
+            continue
+
+        open_deal  = opening_map.get(d.position_id)
+        open_order = order_map.get(open_deal.order) if open_deal else None
+
+        result.append({
+            "ticket":      int(d.ticket),
+            "position_id": int(d.position_id),
+            "symbol":      d.symbol,
+            "type":        int(open_deal.type) if open_deal else int(d.type),
+            "volume":      float(d.volume),
+            "price_open":  float(open_deal.price) if open_deal else float(d.price),
+            "price_close": float(d.price),
+            "sl":          float(open_order.sl) if open_order else 0.0,
+            "tp":          float(open_order.tp) if open_order else 0.0,
+            "profit":      float(d.profit),
+            "commission":  float(d.commission),
+            "swap":        float(d.swap),
+            "time":        int(d.time),
+        })
+
+    return sorted(result, key=lambda x: x["time"], reverse=True)

@@ -1,0 +1,110 @@
+# =========================
+# ROOT / GENERAL
+# =========================
+.DS_Store
+Thumbs.db
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+
+# Environment secrets
+.env
+
+
+# =========================
+# ENV FILES / SECRETS
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# NODE / MERN
+# =========================
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+.cache/
+
+# =========================
+# CLIENT (React/Vite)
+# =========================
+client/node_modules/
+client/dist/
+client/build/
+client/.env
+client/.vite/
+
+# =========================
+# SERVER (Express)
+# =========================
+server/node_modules/
+server/dist/
+server/build/
+server/.env
+
+# =========================
+# PYTHON / FASTAPI
+# =========================
+python/venv/
+python/.venv/
+venv/
+.venv/
+env/
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Python env files
+python/.env
+
+# =========================
+# DATABASE / LOCAL FILES
+# =========================
+*.sqlite3
+*.db
+
+# =========================
+# IDE / EDITOR
+# =========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# =========================
+# OS GENERATED
+# =========================
+Desktop.ini
+
+# =========================
+# TEMP / CACHE
+# =========================
+tmp/
+temp/
+*.tmp

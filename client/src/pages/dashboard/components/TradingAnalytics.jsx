@@ -10,15 +10,17 @@ function Bar({ value, max = 100 }) {
   );
 }
 
-export default function TradingAnalytics({ analytics, openCount }) {
-  const winRate   = analytics?.win_rate   ?? 0;
-  const avgProfit = analytics?.avg_profit ?? 0;
-  const tradesClosed = analytics?.total_trades ?? 0;
+export default function TradingAnalytics({ analytics, openCount, strategyName }) {
+  const winRate      = analytics?.win_rate      ?? 0;
+  const avgProfit    = analytics?.avg_profit    ?? 0;
+  const tradesClosed = analytics?.total_trades  ?? 0;
+
+  const isFiltered = !!strategyName;
 
   return (
     <div className="bg-[#111] rounded-xl p-4 border border-white/5 w-[272px] shrink-0">
       <p className="text-[10px] tracking-[0.2em] text-yellow-400/70 uppercase mb-0.5">
-        Overview
+        {isFiltered ? strategyName : "Overview"}
       </p>
       <p className="text-white font-semibold text-sm mb-5">Trading Analytics</p>
 
@@ -34,8 +36,8 @@ export default function TradingAnalytics({ analytics, openCount }) {
         <div>
           <div className="flex justify-between text-xs">
             <span className="text-gray-500 uppercase tracking-widest">Avg Profit</span>
-            <span className="text-green-400 font-bold">
-              ${Math.abs(avgProfit).toFixed(2)}
+            <span className={`font-bold ${avgProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
+              {avgProfit >= 0 ? "+" : ""}${Math.abs(avgProfit).toFixed(2)}
             </span>
           </div>
           <Bar value={Math.min(Math.abs(avgProfit), 500)} max={500} />

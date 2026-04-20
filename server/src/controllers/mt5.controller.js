@@ -49,7 +49,24 @@ export const addMT5 = async (req, res) => {
 export const getMT5Status = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("mt5Accounts");
-    res.json({ hasAccounts: user.mt5Accounts.length > 0 });
+    const hasAccounts = user.mt5Accounts.length > 0;
+
+    if (hasAccounts) {
+      // Re-establish Python bridge session using saved credentials so the
+      // WebSocket dashboard works immediately without the user re-entering MT5 details.
+      const acc = user.mt5Accounts[0];
+      try {
+        await axios.post("http://localhost:8001/mt5/login", {
+          login: acc.login,
+          password: acc.password,
+          server: acc.server
+        });
+      } catch (_) {
+        // Silent: WebSocket's ensure_connected() will retry once session opens
+      }
+    }
+
+    res.json({ hasAccounts });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch MT5 status" });
   }
