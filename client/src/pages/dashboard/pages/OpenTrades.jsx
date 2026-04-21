@@ -26,7 +26,8 @@ export default function OpenTrades({ data, filteredSymbols }) {
       </div>
 
       <div className="bg-[#111] rounded-xl border border-white/5 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[540px]">
           <thead>
             <tr className="border-b border-white/5">
               {["Symbol", "Type", "Volume", "Open Price", "Current", "Profit"].map((h, i) => (
@@ -77,6 +78,7 @@ export default function OpenTrades({ data, filteredSymbols }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

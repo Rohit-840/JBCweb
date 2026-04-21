@@ -56,22 +56,31 @@ const NAV = [
   },
 ];
 
-export default function Sidebar({ page, setPage, connected }) {
+export default function Sidebar({ page, setPage, connected, open, onClose }) {
   return (
-    <div className="w-[210px] min-w-[210px] h-screen bg-[#0d0d0d] flex flex-col border-r border-white/5">
+    <aside
+      className={`
+        fixed lg:relative inset-y-0 left-0 z-50
+        w-[210px] min-w-[210px] h-screen
+        bg-[#0d0d0d] flex flex-col border-r border-white/5
+        transition-transform duration-300 ease-in-out
+        ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}
+    >
       {/* Logo */}
       <div className="flex flex-col items-center pt-7 pb-5 px-4">
-        <img
-          src={logo}
-          alt="JB Crownstone"
-          className="w-16 h-16 rounded-xl object-cover"
-        />
-        <p className="mt-3 text-[11px] font-bold tracking-[0.18em] text-yellow-400/90">
-          CROWNSTONE
-        </p>
-        <p className="text-[9px] tracking-[0.22em] text-gray-600 uppercase">
-          Private Wealth
-        </p>
+        <div className="relative w-full flex items-center justify-center">
+          <img src={logo} alt="JB Crownstone" className="w-16 h-16 rounded-xl object-cover" />
+          <button
+            onClick={onClose}
+            className="lg:hidden absolute right-0 top-0 w-7 h-7 flex items-center justify-center
+              rounded-lg bg-white/5 border border-white/10 text-gray-500 hover:text-white text-xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+        <p className="mt-3 text-[11px] font-bold tracking-[0.18em] text-yellow-400/90">CROWNSTONE</p>
+        <p className="text-[9px] tracking-[0.22em] text-gray-500 uppercase">Private Wealth</p>
       </div>
 
       <div className="h-px bg-white/5 mx-4" />
@@ -84,7 +93,8 @@ export default function Sidebar({ page, setPage, connected }) {
             <button
               key={item.id}
               onClick={() => setPage(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all relative
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium
+                transition-all relative
                 ${active
                   ? "bg-yellow-500/10 text-yellow-400"
                   : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
@@ -109,14 +119,10 @@ export default function Sidebar({ page, setPage, connected }) {
               : "border-red-500/20 bg-red-500/5 text-red-500"
             }`}
         >
-          <span
-            className={`w-2 h-2 rounded-full shrink-0 ${
-              connected ? "bg-green-400 animate-pulse" : "bg-red-500"
-            }`}
-          />
+          <span className={`w-2 h-2 rounded-full shrink-0 ${connected ? "bg-green-400 animate-pulse" : "bg-red-500"}`} />
           {connected ? "LIVE SESSION" : "DISCONNECTED"}
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

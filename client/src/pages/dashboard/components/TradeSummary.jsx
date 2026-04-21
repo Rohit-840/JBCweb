@@ -244,7 +244,7 @@ export default function TradeSummary({ trades, fullHistory, strategySymbols, str
   const resetKey = JSON.stringify(strategySymbols) + JSON.stringify(strategyVolumeFilter);
 
   return (
-    <div className="flex gap-4 mt-4">
+    <div className="flex flex-col md:flex-row gap-4 mt-4">
       <OpenTradesPanel trades={filteredTrades} />
       <HistoryPanel history={filteredHistory} resetKey={resetKey} />
     </div>

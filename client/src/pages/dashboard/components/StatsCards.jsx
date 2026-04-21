@@ -16,7 +16,7 @@ const CARDS = [
 
 export default function StatsCards({ account }) {
   return (
-    <div className="grid grid-cols-5 gap-3 mb-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
       {CARDS.map(({ key, label, color }) => (
         <div key={key} className="bg-[#111] rounded-xl p-4 border border-white/5">
           <p className="text-[10px] tracking-[0.15em] text-gray-500 uppercase mb-2">

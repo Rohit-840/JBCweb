@@ -88,7 +88,7 @@ export default function DashboardHome({ data, connected }) {
   return (
     <div className="p-5 min-h-full">
       {/* Header */}
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex items-start justify-between gap-3 mb-5 flex-wrap">
         <div>
           <p className="text-[10px] tracking-[0.22em] text-gray-600 uppercase mb-1">
             Crownstone Private Wealth And Investement Management
@@ -129,7 +129,7 @@ export default function DashboardHome({ data, connected }) {
       />
 
       {/* Equity chart + analytics */}
-      <div className="flex gap-4">
+      <div className="flex flex-col lg:flex-row gap-4">
         <EquityChart
           equityHistory={data?.equityHistory}
           strategyData={strategyChartData}

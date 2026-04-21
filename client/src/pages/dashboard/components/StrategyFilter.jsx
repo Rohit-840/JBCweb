@@ -281,8 +281,9 @@ export default function StrategyFilter({
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
             <div
-              className="bg-[#0d0d0d] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-              style={{ width: "90vw", maxWidth: 1180, height: "85vh" }}
+              className="bg-[#0d0d0d] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden
+                w-[95vw] md:w-[90vw] max-w-[1180px]"
+              style={{ height: "90vh" }}
             >
               {/* Modal header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
@@ -309,7 +310,7 @@ export default function StrategyFilter({
               </div>
 
               {/* Stats row — updates with volume filter */}
-              <div className="grid grid-cols-4 gap-3 px-6 py-4 border-b border-white/5 shrink-0">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 md:px-6 py-4 border-b border-white/5 shrink-0">
                 <StatCard label="Total Trades" value={stats.total} />
                 <StatCard
                   label="Average RR"
@@ -329,10 +330,10 @@ export default function StrategyFilter({
               </div>
 
               {/* Body: table (left) + filter+chart (right) */}
-              <div className="flex flex-1 overflow-hidden">
+              <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
 
                 {/* ── Left: history table ── */}
-                <div className="flex-1 overflow-y-auto border-r border-white/5">
+                <div className="md:flex-1 md:overflow-y-auto border-b md:border-b-0 md:border-r border-white/5 md:min-h-0">
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-[#0d0d0d] z-10">
                       <tr className="border-b border-white/5">
@@ -385,7 +386,7 @@ export default function StrategyFilter({
                 </div>
 
                 {/* ── Right: volume filter + chart + open positions ── */}
-                <div className="w-[340px] shrink-0 flex flex-col overflow-y-auto">
+                <div className="w-full md:w-[340px] md:shrink-0 flex flex-col md:overflow-y-auto">
 
                   {/* Volume filter */}
                   <VolumeFilter
