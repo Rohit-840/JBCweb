@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const WS_URL = "ws://localhost:8001/ws/dashboard";
+const WS_URL = `ws://${window.location.host}/ws/dashboard`;
 
 export default function useWebSocket() {
   const [data, setData] = useState(null);

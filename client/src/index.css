@@ -6,11 +6,14 @@ html, body, #root {
   background: black;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport height — respects mobile browser chrome */
   font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overscroll-behavior: none;  /* prevent pull-to-refresh / bounce */
+  -webkit-overflow-scrolling: touch; /* smooth momentum scroll on iOS */
 }
 
 /* Lift the dimmest label text so it's actually readable on dark backgrounds */

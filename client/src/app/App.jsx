@@ -8,17 +8,23 @@ import AccountSelector from "../pages/accounts/AccountSelector.jsx";
 import Dashboard       from "../pages/dashboard/Dashboard.jsx";
 
 function App() {
-  const [loading,         setLoading]         = useState(true);
+  const [loading,         setLoading]         = useState(!sessionStorage.getItem("hasSeenLoading"));
   const [checking,        setChecking]         = useState(false);
   const [token,           setToken]           = useState(localStorage.getItem("token"));
   const [addingAccount,   setAddingAccount]   = useState(false);
-  const [accountSelected, setAccountSelected] = useState(false);
+  const [accountSelected, setAccountSelected] = useState(localStorage.getItem("accountSelected") === "true");
 
   const logout = () => {
     localStorage.clear();
+    sessionStorage.removeItem("hasSeenLoading");
     setToken(null);
     setAccountSelected(false);
     setAddingAccount(false);
+  };
+
+  const handleLoadingFinish = () => {
+    sessionStorage.setItem("hasSeenLoading", "true");
+    setLoading(false);
   };
 
   // After the splash screen, verify the JWT is still valid.
@@ -27,7 +33,7 @@ function App() {
 
     setChecking(true);
     axios
-      .get("http://localhost:5000/api/mt5/status", {
+      .get("/api/mt5/status", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .catch(() => {
@@ -39,7 +45,7 @@ function App() {
   }, [loading]);
 
   // ── Render tree ──────────────────────────────────────────────────────────────
-  if (loading)  return <Loading onFinish={() => setLoading(false)} />;
+  if (loading)  return <Loading onFinish={handleLoadingFinish} />;
   if (checking) return null;
   if (!token)   return <Auth onLogin={setToken} />;
 
@@ -58,7 +64,10 @@ function App() {
     return (
       <AccountSelector
         token={token}
-        onSelect={() => setAccountSelected(true)}
+        onSelect={() => {
+          localStorage.setItem("accountSelected", "true");
+          setAccountSelected(true);
+        }}
         onAddAccount={() => setAddingAccount(true)}
         onLogout={logout}
       />
@@ -68,7 +77,10 @@ function App() {
   return (
     <Dashboard
       onLogout={logout}
-      onSwitchAccount={() => setAccountSelected(false)}
+      onSwitchAccount={() => {
+        localStorage.removeItem("accountSelected");
+        setAccountSelected(false);
+      }}
     />
   );
 }

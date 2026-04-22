@@ -1,7 +1,7 @@
 import { useState } from "react";
-import axios from "axios";
 import { motion } from "framer-motion";
 import logo from "../assets/new3.webp";
+import api from "../services/api";
 
 export default function Auth({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -18,15 +18,13 @@ export default function Auth({ onLogin }) {
       setLoading(true);
       setMsg("");
 
-      const url = isLogin
-        ? "http://localhost:5000/api/auth/login"
-        : "http://localhost:5000/api/auth/signup";
+      const endpoint = isLogin ? "/auth/login" : "/auth/signup";
 
       const payload = isLogin
         ? { email, password }
         : { name, email, password };
 
-      const res = await axios.post(url, payload);
+      const res = await api.post(endpoint, payload);
 
       if (isLogin) {
         localStorage.setItem("token", res.data.token);
@@ -44,8 +42,14 @@ export default function Auth({ onLogin }) {
     setLoading(false);
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleSubmit();
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-10 relative overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] bg-black flex items-center justify-center px-4 py-10 relative overflow-y-auto">
 
       {/* Glow Effects */}
       <div className="absolute w-[350px] h-[350px] bg-yellow-500/10 blur-3xl rounded-full top-0 left-0" />
@@ -124,6 +128,7 @@ export default function Auth({ onLogin }) {
               className="w-full bg-[#101010] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onKeyDown={handleKeyDown}
             />
           )}
 
@@ -133,6 +138,7 @@ export default function Auth({ onLogin }) {
             className="w-full bg-[#101010] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
 
           <input
@@ -141,6 +147,7 @@ export default function Auth({ onLogin }) {
             className="w-full bg-[#101010] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
         </div>
 

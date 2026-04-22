@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import axios from "axios";
+import api from "../../services/api";
 import logo from "../../assets/logo.jpeg";
 
 const BROKER_SERVERS = [
@@ -38,8 +38,8 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(
-        "http://localhost:5000/api/mt5/add",
+      const res = await api.post(
+        "/mt5/add",
         { login, password, server },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -60,13 +60,19 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      connectAccount();
+    }
+  };
+
   const msgColor =
     msg.type === "success" ? "text-emerald-400" :
     msg.type === "error"   ? "text-red-400"     :
     "text-yellow-400";
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-10 relative overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] bg-black flex items-center justify-center px-4 py-10 relative overflow-y-auto">
 
       {/* Background glow */}
       <div className="absolute w-[400px] h-[400px] bg-yellow-500/10 blur-3xl rounded-full top-0 left-0 pointer-events-none" />
@@ -116,6 +122,7 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
             placeholder="MT5 Login ID"
             value={login}
             onChange={(e) => setLogin(e.target.value)}
+            onKeyDown={handleKeyDown}
             disabled={loading}
             className="w-full bg-[#111] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none
               focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -126,6 +133,7 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
             placeholder="MT5 Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={handleKeyDown}
             disabled={loading}
             className="w-full bg-[#111] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none
               focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -134,6 +142,7 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
           <select
             value={server}
             onChange={(e) => setServer(e.target.value)}
+            onKeyDown={handleKeyDown}
             disabled={loading}
             className="w-full bg-[#111] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none
               focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

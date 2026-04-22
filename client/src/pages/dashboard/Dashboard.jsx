@@ -8,11 +8,15 @@ import Profile from "./pages/Profile.jsx";
 import useWebSocket from "./hooks/useWebSocket.js";
 
 export default function Dashboard({ onLogout, onSwitchAccount }) {
-  const [page, setPage]           = useState("dashboard");
+  const [page, setPage]           = useState(localStorage.getItem("dashboard_page") || "dashboard");
   const [sidebarOpen, setSidebar] = useState(false);
   const { data, connected }       = useWebSocket();
 
-  const navigate = (p) => { setPage(p); setSidebar(false); };
+  const navigate = (p) => {
+    setPage(p);
+    localStorage.setItem("dashboard_page", p);
+    setSidebar(false);
+  };
 
   const renderPage = () => {
     switch (page) {
@@ -26,7 +30,7 @@ export default function Dashboard({ onLogout, onSwitchAccount }) {
   };
 
   return (
-    <div className="flex h-screen bg-[#0a0a0a] overflow-hidden">
+    <div className="flex h-screen h-[100dvh] bg-[#0a0a0a] overflow-hidden">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div

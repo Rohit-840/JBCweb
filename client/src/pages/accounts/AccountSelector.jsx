@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
+import api from "../../services/api";
 import logo from "../../assets/new3.webp";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -68,8 +68,10 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
 
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}
       transition={{ delay: index * 0.07, duration: 0.4 }}
       onClick={() => !offline && !disabled && !confirmDelete && onSelect(account.id)}
       className={[
@@ -94,37 +96,37 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="absolute inset-0 z-20 rounded-2xl bg-[#0a0a0a]/96 backdrop-blur-sm
+            className="absolute inset-0 z-20 rounded-2xl bg-[#0d0d0d]
               flex flex-col items-center justify-center gap-5 px-6"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Warning icon */}
-            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/25 flex items-center justify-center">
-              <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <div className="w-14 h-14 rounded-full bg-red-500/20 border-2 border-red-500/60 flex items-center justify-center">
+              <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
               </svg>
             </div>
 
             <div className="text-center">
               <p className="text-white font-semibold text-sm mb-1">Remove this account?</p>
-              <p className="text-gray-500 text-xs">#{account.login}</p>
-              <p className="text-gray-600 text-[11px] mt-0.5 truncate max-w-[180px]">{account.server}</p>
+              <p className="text-gray-300 text-xs font-medium">#{account.login}</p>
+              <p className="text-gray-500 text-[11px] mt-0.5 truncate max-w-[180px]">{account.server}</p>
             </div>
 
-            <div className="flex gap-2 w-full">
+            <div className="flex gap-3 w-full">
               <button
                 onClick={closeConfirm}
                 disabled={deleting}
-                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 text-xs font-semibold
-                  hover:border-white/20 hover:text-white transition-all duration-200"
+                className="flex-1 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-semibold
+                  hover:bg-white/15 hover:border-white/30 transition-all duration-200 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmAndDelete}
                 disabled={deleting}
-                className="flex-1 py-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-semibold
-                  hover:bg-red-500/25 hover:border-red-500/50 transition-all duration-200 flex items-center justify-center gap-1.5"
+                className="flex-1 py-3 rounded-xl bg-red-600 border border-red-500 text-white text-xs font-semibold
+                  hover:bg-red-500 transition-all duration-200 flex items-center justify-center gap-1.5 disabled:opacity-60"
               >
                 {deleting ? (
                   <>
@@ -309,8 +311,8 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
     setLoading(true);
     setFetchError("");
     try {
-      const { data } = await axios.post(
-        "http://localhost:5000/api/mt5/snapshot",
+      const { data } = await api.post(
+        "/mt5/snapshot",
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -327,8 +329,8 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
   const handleSelect = async (accountId) => {
     setSelecting(accountId);
     try {
-      await axios.post(
-        `http://localhost:5000/api/mt5/select/${accountId}`,
+      await api.post(
+        `/mt5/select/${accountId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -341,9 +343,10 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
 
   // Delete only removes from this site + MongoDB — never touches the real MT5 account
   const handleDelete = async (accountId) => {
+    if (!accountId) return;
     try {
-      await axios.delete(
-        `http://localhost:5000/api/mt5/accounts/${accountId}`,
+      await api.delete(
+        `/mt5/accounts/${accountId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAccounts((prev) => prev.filter((a) => a.id !== accountId));
@@ -360,7 +363,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
   const totalPnl    = live.reduce((s, a) => s + (a.profit  ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] relative">
+    <div className="min-h-screen min-h-[100dvh] bg-[#0a0a0a] relative overflow-y-auto">
       {/* Ambient glows */}
       <div className="fixed pointer-events-none w-[700px] h-[700px] rounded-full bg-yellow-500/[0.025] blur-[140px] -top-60 -left-60" />
       <div className="fixed pointer-events-none w-[700px] h-[700px] rounded-full bg-yellow-500/[0.025] blur-[140px] -bottom-60 -right-60" />
@@ -492,16 +495,18 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
             [0, 1, 2].map((i) => <SkeletonCard key={i} index={i} />)
           ) : (
             <>
-              {accounts.map((acc, i) => (
-                <AccountCard
-                  key={acc.id}
-                  account={acc}
-                  index={i}
-                  onSelect={handleSelect}
-                  onDelete={handleDelete}
-                  selecting={selecting}
-                />
-              ))}
+              <AnimatePresence mode="popLayout">
+                {accounts.map((acc, i) => (
+                  <AccountCard
+                    key={acc.id ?? i}
+                    account={acc}
+                    index={i}
+                    onSelect={handleSelect}
+                    onDelete={handleDelete}
+                    selecting={selecting}
+                  />
+                ))}
+              </AnimatePresence>
               <AddAccountCard onAdd={onAddAccount} index={accounts.length} />
             </>
           )}

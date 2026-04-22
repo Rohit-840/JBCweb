@@ -47,7 +47,7 @@ export default function Analytics({ data }) {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {summary.map((c) => (
           <div key={c.label} className="bg-[#111] rounded-xl p-4 border border-white/5">
             <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">
@@ -58,7 +58,7 @@ export default function Analytics({ data }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Win / Loss */}
         <div className="bg-[#111] rounded-xl p-5 border border-white/5">
           <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">
