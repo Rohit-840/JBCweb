@@ -56,7 +56,7 @@ const NAV = [
   },
 ];
 
-export default function Sidebar({ page, setPage, connected, open, onClose }) {
+export default function Sidebar({ page, setPage, connected, open, onClose, onSwitchAccount }) {
   return (
     <aside
       className={`
@@ -110,8 +110,22 @@ export default function Sidebar({ page, setPage, connected, open, onClose }) {
         })}
       </nav>
 
-      {/* Connection status */}
-      <div className="px-4 pb-6">
+      {/* Footer */}
+      <div className="px-4 pb-6 space-y-2">
+        {/* Switch account */}
+        <button
+          onClick={onSwitchAccount}
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-yellow-500/15
+            bg-yellow-500/[0.04] text-yellow-500/70 text-[11px] font-semibold tracking-widest
+            hover:border-yellow-500/35 hover:text-yellow-400 transition-all duration-200"
+        >
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4M4 17h12m0 0l-4-4m4 4l-4 4" />
+          </svg>
+          SWITCH ACCOUNT
+        </button>
+
+        {/* Connection status */}
         <div
           className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[11px] font-semibold tracking-widest
             ${connected

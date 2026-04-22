@@ -1,4 +1,4 @@
-export default function Profile({ data, onLogout }) {
+export default function Profile({ data, onLogout, onSwitchAccount }) {
   const account = data?.account;
   const email   = localStorage.getItem("userEmail") || "—";
 
@@ -49,6 +49,18 @@ export default function Profile({ data, onLogout }) {
             ))}
           </div>
         </div>
+
+        {/* Switch Account */}
+        <button
+          onClick={onSwitchAccount}
+          className="w-full py-3 rounded-xl bg-yellow-500/8 border border-yellow-500/20 text-yellow-400/80
+            text-sm font-semibold hover:bg-yellow-500/15 hover:text-yellow-400 transition-all flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4M4 17h12m0 0l-4-4m4 4l-4 4" />
+          </svg>
+          Switch Account
+        </button>
 
         {/* Logout */}
         <button

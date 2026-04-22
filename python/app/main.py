@@ -1,15 +1,19 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
+from typing import List
 from app.websocket import dashboard_stream
-from app.services.mt5_service import login_mt5
+from app.services.mt5_service import login_mt5, get_account_snapshot
 from pydantic import BaseModel
 import MetaTrader5 as mt5
 
-app = FastAPI()
 
-
-@app.on_event("startup")
-def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     print("✅ Python MT5 bridge ready — waiting for credentials via /mt5/login")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
@@ -41,6 +45,16 @@ def mt5_login(data: MT5Login):
         "account": {
             "login": acc.login,
             "name":  acc.name,
-            "server": acc.server
+            "server": acc.server,
         }
     }
+
+
+@app.post("/mt5/snapshot")
+def mt5_snapshot(accounts: List[MT5Login]):
+    credentials = [
+        {"login": a.login, "password": a.password, "server": a.server}
+        for a in accounts
+    ]
+    results = get_account_snapshot(credentials)
+    return {"results": results}

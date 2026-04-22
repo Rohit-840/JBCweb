@@ -1,7 +1,6 @@
 import MetaTrader5 as mt5
 from datetime import datetime, timedelta
 
-# In-memory session storage (survives WebSocket reconnects, cleared on server restart)
 _session = {"login": None, "password": None, "server": None}
 
 
@@ -100,8 +99,6 @@ def get_open_trades():
 
 
 # 📜 HISTORY (LAST 7 DAYS)
-from datetime import datetime, timedelta
-
 def get_history():
     to_date = datetime.now()
     from_date = to_date - timedelta(days=7)
@@ -159,6 +156,43 @@ def extract_symbols(trades):
     for t in trades:
         symbols.add(t["symbol"])
     return list(symbols)
+
+
+def get_account_snapshot(credentials_list: list) -> list:
+    """
+    Loop through each credential set, login, fetch account info, collect results.
+    Restores the previously active session when finished.
+    """
+    prev = (_session["login"], _session["password"], _session["server"])
+    results = []
+
+    for creds in credentials_list:
+        try:
+            ok = login_mt5(int(creds["login"]), creds["password"], creds["server"])
+            if ok:
+                info = get_account_info()
+                results.append({"success": True, **info})
+            else:
+                code, msg = mt5.last_error()
+                results.append({
+                    "success": False,
+                    "login": creds["login"],
+                    "server": creds["server"],
+                    "error": f"MT5 error {code}: {msg}",
+                })
+        except Exception as exc:
+            results.append({
+                "success": False,
+                "login": creds["login"],
+                "server": creds["server"],
+                "error": str(exc),
+            })
+
+    # Restore previously active session
+    if prev[0] is not None:
+        login_mt5(prev[0], prev[1], prev[2])
+
+    return results
 
 
 def get_history_with_orders(days: int = 90):

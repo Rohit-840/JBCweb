@@ -7,7 +7,7 @@ import Analytics from "./pages/Analytics.jsx";
 import Profile from "./pages/Profile.jsx";
 import useWebSocket from "./hooks/useWebSocket.js";
 
-export default function Dashboard({ onLogout }) {
+export default function Dashboard({ onLogout, onSwitchAccount }) {
   const [page, setPage]           = useState("dashboard");
   const [sidebarOpen, setSidebar] = useState(false);
   const { data, connected }       = useWebSocket();
@@ -20,7 +20,7 @@ export default function Dashboard({ onLogout }) {
       case "trades":    return <OpenTrades data={data} />;
       case "history":   return <History data={data} />;
       case "analytics": return <Analytics data={data} />;
-      case "profile":   return <Profile data={data} onLogout={onLogout} />;
+      case "profile":   return <Profile data={data} onLogout={onLogout} onSwitchAccount={onSwitchAccount} />;
       default:          return null;
     }
   };
@@ -41,6 +41,7 @@ export default function Dashboard({ onLogout }) {
         connected={connected}
         open={sidebarOpen}
         onClose={() => setSidebar(false)}
+        onSwitchAccount={onSwitchAccount}
       />
 
       <main className="flex-1 overflow-y-auto min-w-0">
