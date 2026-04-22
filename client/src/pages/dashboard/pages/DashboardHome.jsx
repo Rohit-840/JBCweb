@@ -4,7 +4,7 @@ import StrategyFilter from "../components/StrategyFilter.jsx";
 import EquityChart from "../components/EquityChart.jsx";
 import TradingAnalytics from "../components/TradingAnalytics.jsx";
 import TradeSummary from "../components/TradeSummary.jsx";
-import { STRATEGIES } from "../constants.js";
+import { STRATEGIES, applyTPSLFilter } from "../constants.js";
 
 function computeStrategyAnalytics(history) {
   const total = history.length;
@@ -28,11 +28,12 @@ export default function DashboardHome({ data, connected }) {
 
   const strategySymbols = activeStrategy ? STRATEGIES[activeStrategy] : null;
 
-  // History filtered by strategy symbols
+  // History filtered by strategy symbols, then by TP/SL if the strategy defines them
   const strategyHistory = useMemo(() => {
     if (!strategySymbols) return null;
-    return (data?.full_history || []).filter((h) => strategySymbols.includes(h.symbol));
-  }, [strategySymbols, data?.full_history]);
+    const bySymbol = (data?.full_history || []).filter((h) => strategySymbols.includes(h.symbol));
+    return applyTPSLFilter(bySymbol, activeStrategy);
+  }, [strategySymbols, activeStrategy, data?.full_history]);
 
   // Open trades filtered by strategy symbols
   const strategyTrades = useMemo(() => {
@@ -144,8 +145,8 @@ export default function DashboardHome({ data, connected }) {
 
       {/* Open trades + history */}
       <TradeSummary
-        trades={data?.trades || []}
-        fullHistory={data?.full_history || []}
+        trades={strategyTrades ?? data?.trades ?? []}
+        fullHistory={strategyHistory ?? data?.full_history ?? []}
         strategySymbols={strategySymbols}
         strategyVolumeFilter={strategyVolumeFilter}
       />

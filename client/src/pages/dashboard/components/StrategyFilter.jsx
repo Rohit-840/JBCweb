@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { STRATEGIES } from "../constants.js";
+import { STRATEGIES, STRATEGY_CONFIG, applyTPSLFilter } from "../constants.js";
 import SymbolChart from "./SymbolChart.jsx";
 
 /* ── helpers ── */
@@ -145,11 +145,12 @@ export default function StrategyFilter({
     setPopup(null);
   };
 
-  /* All history for the selected symbol */
-  const symbolHistory = useMemo(
-    () => popup ? (data?.full_history || []).filter((h) => h.symbol === popup) : [],
-    [popup, data?.full_history]
-  );
+  /* All history for the selected symbol, filtered by TP/SL if strategy defines them */
+  const symbolHistory = useMemo(() => {
+    if (!popup) return [];
+    const bySymbol = (data?.full_history || []).filter((h) => h.symbol === popup);
+    return applyTPSLFilter(bySymbol, activeStrategy);
+  }, [popup, activeStrategy, data?.full_history]);
 
   const symbolTrades = useMemo(
     () => popup ? (data?.trades || []).filter((t) => t.symbol === popup) : [],
@@ -214,16 +215,29 @@ export default function StrategyFilter({
           <div className="mt-3 pt-3 border-t border-white/5 space-y-2.5">
             {/* Symbol chips */}
             <div className="flex gap-2 flex-wrap">
-              {STRATEGIES[activeStrategy].map((sym) => (
-                <button
-                  key={sym}
-                  onClick={() => setPopup(sym)}
-                  className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs
-                    text-gray-300 hover:border-yellow-500/30 hover:text-yellow-400 transition-all"
-                >
-                  {sym}
-                </button>
-              ))}
+              {STRATEGIES[activeStrategy].map((sym) => {
+                const cfg = STRATEGY_CONFIG[activeStrategy]?.[sym];
+                return (
+                  <button
+                    key={sym}
+                    onClick={() => setPopup(sym)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs
+                      text-gray-300 hover:border-yellow-500/30 hover:text-yellow-400 transition-all"
+                  >
+                    <span>{sym}</span>
+                    {cfg && (
+                      <span className="flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 rounded bg-green-500/15 border border-green-500/30 text-green-400 text-[9px] font-bold">
+                          TP ${cfg.tp}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-[9px] font-bold">
+                          SL ${cfg.sl}
+                        </span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Strategy-level volume multi-select */}
@@ -287,13 +301,32 @@ export default function StrategyFilter({
             >
               {/* Modal header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                   <div>
                     <p className="text-[10px] text-yellow-400/70 uppercase tracking-widest mb-0.5">
                       {activeStrategy} Strategy
                     </p>
                     <h2 className="text-2xl font-bold text-white">{popup}</h2>
                   </div>
+                  {/* T/P and S/L badges */}
+                  {STRATEGY_CONFIG[activeStrategy]?.[popup] && (
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                        bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-bold">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                        T/P ${STRATEGY_CONFIG[activeStrategy][popup].tp}
+                      </span>
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                        bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
+                        S/L ${STRATEGY_CONFIG[activeStrategy][popup].sl}
+                      </span>
+                    </div>
+                  )}
                   {isFiltered && (
                     <span className="text-[10px] px-2.5 py-1 rounded-full bg-yellow-500/10
                       border border-yellow-500/30 text-yellow-400 font-semibold tracking-wide">
