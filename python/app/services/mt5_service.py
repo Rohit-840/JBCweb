@@ -1,48 +1,77 @@
 import MetaTrader5 as mt5
 from datetime import datetime, timedelta
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# Resolve .env from python/app/.env regardless of where uvicorn is launched from
+load_dotenv(Path(__file__).parent.parent / ".env")
+
+# MT5 terminal path — set MT5_PATH in python/app/.env to switch installations
+MT5_PATH = Path(os.getenv("MT5_PATH", r"C:\Program Files\MetaTrader 5\terminal64.exe"))
 
 _session = {"login": None, "password": None, "server": None}
+_initialized = False  # Tracks whether mt5.initialize() succeeded
 
 
 def connect_mt5():
-    """
-    Startup probe only — does NOT attempt login.
-    Real authentication happens in login_mt5() once credentials arrive.
-    Error -6 (AUTH_FAILED) here is normal and expected.
-    """
+    """Startup probe only — real auth happens in login_mt5() once credentials arrive."""
     print("⏳ MT5 startup: waiting for user credentials before connecting.")
     return False
 
 
 def login_mt5(login: int, password: str, server: str) -> bool:
     """
-    Connect and authenticate in one call by passing credentials directly to
-    mt5.initialize(). This bypasses error -6 (AUTH_FAILED) which occurs when
-    calling initialize() without credentials on a terminal that requires auth.
+    Connect and authenticate against the MT5 terminal.
+    Uses the path from MT5_PATH (.env) so multiple installations can be targeted.
     """
-    # Shut down any stale connection first
-    mt5.shutdown()
+    global _initialized
 
-    if not mt5.initialize(login=login, password=password, server=server):
+    if _initialized:
+        mt5.shutdown()
+        _initialized = False
+
+    try:
+        if not MT5_PATH.exists():
+            print(f"❌ MT5 terminal not found at: {MT5_PATH}")
+            print("   Update MT5_PATH in python/app/.env to the correct path.")
+            return False
+
+        ok = mt5.initialize(
+            path=str(MT5_PATH),
+            login=login,
+            password=password,
+            server=server,
+            timeout=15000,
+        )
+
+        if not ok:
+            code, msg = mt5.last_error()
+            print(f"❌ MT5 initialize() failed — error {code}: {msg}")
+            return False
+
+        _initialized = True
+        _session["login"]    = login
+        _session["password"] = password
+        _session["server"]   = server
+
+        acc  = mt5.account_info()
+        name = acc.name if acc else "unknown"
+        print(f"✅ MT5 connected: {name} ({login}) @ {server}  [{MT5_PATH.name}]")
+        return True
+
+    except Exception as exc:
         code, msg = mt5.last_error()
-        print(f"❌ MT5 connect failed — code {code}: {msg}")
+        print(f"❌ MT5 unexpected error: {exc} | MT5 last_error={code}: {msg}")
         return False
-
-    _session["login"]    = login
-    _session["password"] = password
-    _session["server"]   = server
-    acc = mt5.account_info()
-    name = acc.name if acc else "unknown"
-    print(f"✅ MT5 connected: {name} ({login}) @ {server}")
-    return True
 
 
 def ensure_connected() -> bool:
     """Re-login with stored credentials if the MT5 session has dropped."""
     if mt5.account_info() is not None:
-        return True  # Already live
+        return True
     if _session["login"] is None:
-        return False  # No credentials stored yet
+        return False
     print("🔄 MT5 session dropped — reconnecting...")
     return login_mt5(_session["login"], _session["password"], _session["server"])
 
@@ -54,22 +83,17 @@ def get_account_info():
         return {}
 
     return {
-        # 🔑 Identity
-        "login": acc.login,
-        "name": acc.name,
-        "server": acc.server,
-        "currency": acc.currency,
-
-        # 💰 Financials
-        "balance": acc.balance,
-        "equity": acc.equity,
-        "margin": acc.margin,
+        "login":       acc.login,
+        "name":        acc.name,
+        "server":      acc.server,
+        "currency":    acc.currency,
+        "balance":     acc.balance,
+        "equity":      acc.equity,
+        "margin":      acc.margin,
         "free_margin": acc.margin_free,
-        "profit": acc.profit,
-
-        # ⚙️ Extra (useful later)
-        "leverage": acc.leverage,
-        "company": acc.company
+        "profit":      acc.profit,
+        "leverage":    acc.leverage,
+        "company":     acc.company,
     }
 
 
@@ -79,83 +103,70 @@ def get_open_trades():
     if positions is None:
         return []
 
-    trades = []
-    for pos in positions:
-        trades.append({
-            "ticket": pos.ticket,
-            "symbol": pos.symbol,
-            "type": pos.type,
-            "volume": pos.volume,
-            "price_open": pos.price_open,
+    return [
+        {
+            "ticket":        pos.ticket,
+            "symbol":        pos.symbol,
+            "type":          pos.type,
+            "volume":        pos.volume,
+            "price_open":    pos.price_open,
             "price_current": pos.price_current,
-            "profit": pos.profit,
-            "sl": pos.sl,
-            "tp": pos.tp,
-            "time": pos.time,
-            "comment": pos.comment
-        })
-
-    return trades
+            "profit":        pos.profit,
+            "sl":            pos.sl,
+            "tp":            pos.tp,
+            "time":          pos.time,
+            "comment":       pos.comment,
+        }
+        for pos in positions
+    ]
 
 
 # 📜 HISTORY (LAST 7 DAYS)
 def get_history():
-    to_date = datetime.now()
+    to_date   = datetime.now()
     from_date = to_date - timedelta(days=7)
-
     deals = mt5.history_deals_get(from_date, to_date)
-
     if deals is None:
         return []
 
-    history = []
-    for d in deals:
-        history.append({
-            "ticket": d.ticket,
-            "order": d.order,
-            "symbol": d.symbol,
-            "type": d.type,
-            "entry": d.entry,
-            "volume": d.volume,
-            "price": d.price,
-            "profit": d.profit,
+    return [
+        {
+            "ticket":     d.ticket,
+            "order":      d.order,
+            "symbol":     d.symbol,
+            "type":       d.type,
+            "entry":      d.entry,
+            "volume":     d.volume,
+            "price":      d.price,
+            "profit":     d.profit,
             "commission": d.commission,
-            "swap": d.swap,
-            "time": d.time,
-            "comment": d.comment
-        })
+            "swap":       d.swap,
+            "time":       d.time,
+            "comment":    d.comment,
+        }
+        for d in deals
+    ]
 
-    return history
 
 def get_raw_mt5_data():
     return {
-        "account_raw": str(mt5.account_info()),
+        "account_raw":   str(mt5.account_info()),
         "positions_raw": str(mt5.positions_get()),
-        "history_raw": str(mt5.history_deals_get())
+        "history_raw":   str(mt5.history_deals_get()),
     }
-    
-    
+
+
 def get_live_prices(symbols):
     prices = {}
-
     for symbol in symbols:
         tick = mt5.symbol_info_tick(symbol)
-
         if tick is not None:
-            prices[symbol] = {
-                "bid": tick.bid,
-                "ask": tick.ask,
-                "time": tick.time
-            }
-
+            prices[symbol] = {"bid": tick.bid, "ask": tick.ask, "time": tick.time}
     return prices
 
 
 def extract_symbols(trades):
-    symbols = set()
-    for t in trades:
-        symbols.add(t["symbol"])
-    return list(symbols)
+    return list({t["symbol"] for t in trades})
 
 
 def get_account_snapshot(credentials_list: list) -> list:
@@ -176,19 +187,18 @@ def get_account_snapshot(credentials_list: list) -> list:
                 code, msg = mt5.last_error()
                 results.append({
                     "success": False,
-                    "login": creds["login"],
-                    "server": creds["server"],
-                    "error": f"MT5 error {code}: {msg}",
+                    "login":   creds["login"],
+                    "server":  creds["server"],
+                    "error":   f"MT5 error {code}: {msg}",
                 })
         except Exception as exc:
             results.append({
                 "success": False,
-                "login": creds["login"],
-                "server": creds["server"],
-                "error": str(exc),
+                "login":   creds["login"],
+                "server":  creds["server"],
+                "error":   str(exc),
             })
 
-    # Restore previously active session
     if prev[0] is not None:
         login_mt5(prev[0], prev[1], prev[2])
 
@@ -204,13 +214,11 @@ def get_history_with_orders(days: int = 90):
     if all_deals is None:
         return []
 
-    # Map position_id → opening deal
     opening_map: dict = {}
     for d in all_deals:
         if d.entry == 0 and d.symbol:
             opening_map[d.position_id] = d
 
-    # Map order ticket → order (for SL / TP)
     all_orders = mt5.history_orders_get(from_date, to_date)
     order_map: dict = {}
     if all_orders is not None:
