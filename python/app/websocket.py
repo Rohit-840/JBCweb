@@ -1,5 +1,6 @@
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 import asyncio
 from app.services.mt5_service import (
     ensure_connected,
@@ -65,5 +66,5 @@ async def dashboard_stream(websocket: WebSocket):
 
             await asyncio.sleep(1)
 
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, ConnectionClosedError, ConnectionClosedOK):
         pass
