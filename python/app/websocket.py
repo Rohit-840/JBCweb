@@ -14,16 +14,20 @@ from app.services.mt5_service import (
 from app.services.analytics_service import calculate_analytics
 
 _EMPTY = {
-    "type": "dashboard",
-    "connected": False,
-    "account": {},
-    "trades": [],
-    "history": [],
-    "analytics": {},
-    "prices": {},
-    "symbols": [],
+    "type":         "dashboard",
+    "connected":    False,
+    "account":      {},
+    "trades":       [],
+    "history":      [],
+    "analytics":    {},
+    "prices":       {},
+    "symbols":      [],
     "full_history": [],
 }
+
+# Refresh the 365-day history every N ticks (1 tick ≈ 1 second).
+# 10 = closed trades appear within 10 seconds of being closed in MT5.
+_HISTORY_INTERVAL = 10
 
 
 async def dashboard_stream(websocket: WebSocket):
@@ -34,23 +38,38 @@ async def dashboard_stream(websocket: WebSocket):
 
     try:
         while True:
+
+            # ── Ensure MT5 session is live ────────────────────────────────
             if not ensure_connected():
                 await websocket.send_json(_EMPTY)
                 await asyncio.sleep(2)
                 continue
 
-            # Refresh full history (with SL/TP) every 30 seconds
-            if tick % 30 == 0:
-                full_history = get_history_with_orders(days=90)
+            # ── Full history refresh (every _HISTORY_INTERVAL seconds) ────
+            # All MT5 calls MUST stay in the asyncio event-loop thread —
+            # asyncio.to_thread() would move them to a different OS thread
+            # which breaks MT5's IPC connection and causes -10004 errors.
+            if tick % _HISTORY_INTERVAL == 0:
+                try:
+                    full_history = get_history_with_orders(365)
+                except Exception as exc:
+                    print(f"⚠️  history refresh error: {exc}")
+                    # keep using last good full_history
 
             tick += 1
 
-            account  = get_account_info()
-            trades   = get_open_trades()
-            history  = get_history()
-            symbols  = extract_symbols(trades)
-            prices   = get_live_prices(symbols)
-            analytics = calculate_analytics(trades, history)
+            # ── Per-tick live data ────────────────────────────────────────
+            try:
+                account   = get_account_info()
+                trades    = get_open_trades()
+                history   = get_history()
+                symbols   = extract_symbols(trades)
+                prices    = get_live_prices(symbols)
+                analytics = calculate_analytics(trades, history)
+            except Exception as exc:
+                print(f"⚠️  tick data error: {exc}")
+                await asyncio.sleep(1)
+                continue
 
             await websocket.send_json({
                 "type":         "dashboard",

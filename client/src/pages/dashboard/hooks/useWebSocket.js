@@ -36,7 +36,9 @@ export default function useWebSocket() {
             ];
           }
           setData({ ...parsed, equityHistory: [...equityHistory.current] });
-        } catch (_) {}
+        } catch {
+          // non-JSON frame — ignore
+        }
       };
     }
 

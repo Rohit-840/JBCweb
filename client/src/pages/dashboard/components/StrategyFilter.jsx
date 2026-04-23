@@ -148,12 +148,19 @@ export default function StrategyFilter({
   /* All history for the selected symbol, filtered by TP/SL if strategy defines them */
   const symbolHistory = useMemo(() => {
     if (!popup) return [];
-    const bySymbol = (data?.full_history || []).filter((h) => h.symbol === popup);
+    const upper = popup.toUpperCase();
+    const bySymbol = (data?.full_history || []).filter(
+      (h) => h.symbol?.trim().toUpperCase() === upper
+    );
     return applyTPSLFilter(bySymbol, activeStrategy);
   }, [popup, activeStrategy, data?.full_history]);
 
   const symbolTrades = useMemo(
-    () => popup ? (data?.trades || []).filter((t) => t.symbol === popup) : [],
+    () => popup
+      ? (data?.trades || []).filter(
+          (t) => t.symbol?.trim().toUpperCase() === popup.toUpperCase()
+        )
+      : [],
     [popup, data?.trades]
   );
 

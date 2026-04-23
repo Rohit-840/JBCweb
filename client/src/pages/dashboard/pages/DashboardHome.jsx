@@ -28,18 +28,30 @@ export default function DashboardHome({ data, connected }) {
 
   const strategySymbols = activeStrategy ? STRATEGIES[activeStrategy] : null;
 
+  // Upper-cased set for case-insensitive symbol matching.
+  // MT5 brokers occasionally return symbol names in different cases
+  // (e.g. "spotcrude" vs "SpotCrude") — normalising prevents invisible misses.
+  const strategySymbolsUpper = useMemo(
+    () => strategySymbols ? strategySymbols.map((s) => s.toUpperCase()) : null,
+    [strategySymbols]
+  );
+
   // History filtered by strategy symbols, then by TP/SL if the strategy defines them
   const strategyHistory = useMemo(() => {
-    if (!strategySymbols) return null;
-    const bySymbol = (data?.full_history || []).filter((h) => strategySymbols.includes(h.symbol));
+    if (!strategySymbolsUpper) return null;
+    const bySymbol = (data?.full_history || []).filter(
+      (h) => strategySymbolsUpper.includes(h.symbol?.trim().toUpperCase())
+    );
     return applyTPSLFilter(bySymbol, activeStrategy);
-  }, [strategySymbols, activeStrategy, data?.full_history]);
+  }, [strategySymbolsUpper, activeStrategy, data?.full_history]);
 
   // Open trades filtered by strategy symbols
   const strategyTrades = useMemo(() => {
-    if (!strategySymbols) return null;
-    return (data?.trades || []).filter((t) => strategySymbols.includes(t.symbol));
-  }, [strategySymbols, data?.trades]);
+    if (!strategySymbolsUpper) return null;
+    return (data?.trades || []).filter(
+      (t) => strategySymbolsUpper.includes(t.symbol?.trim().toUpperCase())
+    );
+  }, [strategySymbolsUpper, data?.trades]);
 
   // Unique volumes available for the current strategy (for chip list)
   const availableStrategyVolumes = useMemo(() => {

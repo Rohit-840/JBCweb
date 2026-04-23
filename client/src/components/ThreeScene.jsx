@@ -1,18 +1,22 @@
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Points, PointMaterial } from "@react-three/drei";
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
+
+// Generated once at module load — moving out of render scope satisfies the
+// React Compiler's purity rule (Math.random is impure inside useMemo).
+const PARTICLE_POSITIONS = (() => {
+  const arr = new Float32Array(5000 * 3);
+  for (let i = 0; i < 5000; i++) {
+    arr[i * 3]     = (Math.random() - 0.5) * 20;
+    arr[i * 3 + 1] = (Math.random() - 0.5) * 20;
+    arr[i * 3 + 2] = (Math.random() - 0.5) * 20;
+  }
+  return arr;
+})();
 
 // 🌌 Particle Background
 function Particles() {
-  const positions = useMemo(() => {
-    const arr = new Float32Array(5000 * 3);
-    for (let i = 0; i < 5000; i++) {
-      arr[i * 3] = (Math.random() - 0.5) * 20;
-      arr[i * 3 + 1] = (Math.random() - 0.5) * 20;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 20;
-    }
-    return arr;
-  }, []);
+  const positions = PARTICLE_POSITIONS;
 
   return (
     <Points positions={positions} stride={3}>

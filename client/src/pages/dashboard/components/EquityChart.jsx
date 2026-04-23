@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 
-function buildSVG({ pts, width, height, padL, padR, padT, padB, color }) {
+function buildSVG({ pts, width, height, padL, padR, padT, padB }) {
   const chartW = Math.max(width - padL - padR, 10);
   const chartH = height - padT - padB;
 

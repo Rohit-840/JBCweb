@@ -24,9 +24,12 @@ function fmtTime(ts) {
   });
 }
 
+// full_history already contains only closing deals (entry=1) going back 90 days,
+// enriched with price_open, price_close, sl, tp. Using it here instead of the
+// 7-day `history` feed ensures symbols like SpotCrude are visible regardless
+// of when they were closed.
 export default function History({ data, filteredSymbols }) {
-  const history = (data?.history || [])
-    .filter((h) => h.entry === 1)
+  const history = (data?.full_history || [])
     .filter((h) => !filteredSymbols || filteredSymbols.includes(h.symbol));
 
   return (
@@ -40,54 +43,54 @@ export default function History({ data, filteredSymbols }) {
 
       <div className="bg-[#111] rounded-xl border border-white/5 overflow-hidden">
         <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[460px]">
-          <thead>
-            <tr className="border-b border-white/5">
-              {["Symbol", "Type", "Volume", "Close Time", "Profit"].map((h, i) => (
-                <th
-                  key={h}
-                  className={`px-5 py-3.5 text-[10px] tracking-widest text-gray-600 uppercase font-medium ${
-                    i >= 3 ? "text-right" : "text-left"
-                  }`}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {history.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-gray-700 text-sm">
-                  No trade history
-                </td>
-              </tr>
-            ) : (
-              history.map((h, i) => (
-                <tr
-                  key={`${h.ticket}-${i}`}
-                  className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
-                >
-                  <td className="px-5 py-3.5 text-white font-semibold">{h.symbol}</td>
-                  <td className="px-5 py-3.5">
-                    <TypeBadge type={h.type} />
-                  </td>
-                  <td className="px-5 py-3.5 text-gray-400">{h.volume}</td>
-                  <td className="px-5 py-3.5 text-right text-gray-500 font-mono text-xs">
-                    {fmtTime(h.time)}
-                  </td>
-                  <td
-                    className={`px-5 py-3.5 text-right font-semibold ${
-                      h.profit >= 0 ? "text-green-400" : "text-red-400"
+          <table className="w-full text-sm min-w-[460px]">
+            <thead>
+              <tr className="border-b border-white/5">
+                {["Symbol", "Type", "Volume", "Close Time", "Profit"].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`px-5 py-3.5 text-[10px] tracking-widest text-gray-600 uppercase font-medium ${
+                      i >= 3 ? "text-right" : "text-left"
                     }`}
                   >
-                    {h.profit >= 0 ? "+" : ""}${h.profit.toFixed(2)}
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {history.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-10 text-center text-gray-700 text-sm">
+                    No trade history
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                history.map((h, i) => (
+                  <tr
+                    key={`${h.ticket}-${i}`}
+                    className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                  >
+                    <td className="px-5 py-3.5 text-white font-semibold">{h.symbol}</td>
+                    <td className="px-5 py-3.5">
+                      <TypeBadge type={h.type} />
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-400">{h.volume}</td>
+                    <td className="px-5 py-3.5 text-right text-gray-500 font-mono text-xs">
+                      {fmtTime(h.time)}
+                    </td>
+                    <td
+                      className={`px-5 py-3.5 text-right font-semibold ${
+                        h.profit >= 0 ? "text-green-400" : "text-red-400"
+                      }`}
+                    >
+                      {h.profit >= 0 ? "+" : ""}${h.profit.toFixed(2)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

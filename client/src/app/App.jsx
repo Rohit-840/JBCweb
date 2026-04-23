@@ -42,7 +42,7 @@ function App() {
         setToken(null);
       })
       .finally(() => setChecking(false));
-  }, [loading]);
+  }, [loading, token]);
 
   // ── Render tree ──────────────────────────────────────────────────────────────
   if (loading)  return <Loading onFinish={handleLoadingFinish} />;
