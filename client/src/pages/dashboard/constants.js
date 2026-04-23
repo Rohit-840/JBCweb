@@ -1,5 +1,5 @@
 export const STRATEGIES = {
-  TITAN:   ["XAUUSD", "NAS100", "BTCUSD"],
+  TITAN:   ["XAUUSD", "NAS100", "BTCUSD", "SpotCrude"],
   ORION:   ["EURUSD", "GBPUSD", "USDCAD"],
   ALPHA:   ["EURUSD"],
   SCRABER: ["GBPJPY"],
