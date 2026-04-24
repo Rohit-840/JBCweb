@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
-import { STRATEGIES, STRATEGY_CONFIG, applyTPSLFilter } from "../constants.js";
-import SymbolChart from "./SymbolChart.jsx";
+import { STRATEGY_CONFIG, applyTPSLFilter } from "../constants.js";
+import SymbolChart      from "./SymbolChart.jsx";
+import AddSymbolInput   from "./AddSymbolInput.jsx";
 import InteractiveChart from "./InteractiveChart.jsx";/* helpers */
 function TypeBadge({ type }) {
   const isBuy = type === 0;
@@ -116,8 +117,16 @@ function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
 
 /* main component */
 export default function StrategyFilter({
-  data, activeStrategy, onStrategyChange,
-  availableVolumes = [], volumeFilter = [], onVolumeFilterChange,
+  data,
+  strategies = {},
+  activeStrategy,
+  onStrategyChange,
+  onAddSymbol,
+  onRemoveSymbol,
+  symbolLoading = false,
+  availableVolumes = [],
+  volumeFilter = [],
+  onVolumeFilterChange,
 }) {
   const [popup, setPopup]             = useState(null);
   const [popupVolume, setPopupVolume] = useState("");
@@ -219,13 +228,13 @@ export default function StrategyFilter({
             </p>
             <p className="text-white font-medium text-sm">
               {activeStrategy
-                ? `${activeStrategy}: ${STRATEGIES[activeStrategy].join(", ")}`
+                ? `${activeStrategy}: ${(strategies[activeStrategy] || []).join(", ")}`
                 : "Choose your Strategy"}
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {Object.keys(STRATEGIES).map((name) => (
+            {Object.keys(strategies).map((name) => (
               <button
                 key={name}
                 onClick={() => handleStrategy(name)}
@@ -252,32 +261,55 @@ export default function StrategyFilter({
 
         {activeStrategy && (
           <div className="mt-3 pt-3 border-t border-white/5 space-y-2.5">
-            {/* Symbol chips */}
+            {/* Symbol chips — each has a × to remove */}
             <div className="flex gap-2 flex-wrap">
-              {STRATEGIES[activeStrategy].map((sym) => {
+              {(strategies[activeStrategy] || []).map((sym) => {
                 const cfg = STRATEGY_CONFIG[activeStrategy]?.[sym];
                 return (
-                  <button
+                  <span
                     key={sym}
-                    onClick={() => setPopup(sym)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs
-                      text-gray-300 hover:border-yellow-500/30 hover:text-yellow-400 transition-all"
+                    className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                      bg-white/5 border border-white/10 text-xs text-gray-300
+                      hover:border-yellow-500/30 hover:text-yellow-400 transition-all"
                   >
-                    <span>{sym}</span>
-                    {cfg && (
-                      <span className="flex items-center gap-1">
-                        <span className="px-1.5 py-0.5 rounded bg-green-500/15 border border-green-500/30 text-green-400 text-[9px] font-bold">
-                          TP ${cfg.tp}
+                    {/* Clicking the label opens the symbol detail popup */}
+                    <button
+                      onClick={() => setPopup(sym)}
+                      className="flex items-center gap-1.5"
+                    >
+                      <span>{sym}</span>
+                      {cfg && (
+                        <span className="flex items-center gap-1">
+                          <span className="px-1.5 py-0.5 rounded bg-green-500/15 border border-green-500/30 text-green-400 text-[9px] font-bold">
+                            TP ${cfg.tp}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-[9px] font-bold">
+                            SL ${cfg.sl}
+                          </span>
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-[9px] font-bold">
-                          SL ${cfg.sl}
-                        </span>
-                      </span>
-                    )}
-                  </button>
+                      )}
+                    </button>
+
+                    {/* × remove button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onRemoveSymbol?.(activeStrategy, sym); }}
+                      title={`Remove ${sym} from ${activeStrategy}`}
+                      className="opacity-0 group-hover:opacity-100 ml-0.5 text-gray-600
+                        hover:text-red-400 transition-all leading-none text-sm"
+                    >
+                      ×
+                    </button>
+                  </span>
                 );
               })}
             </div>
+
+            {/* Add symbol inline input */}
+            <AddSymbolInput
+              strategyName={activeStrategy}
+              loading={symbolLoading}
+              onAdd={(sym) => onAddSymbol?.(activeStrategy, sym)}
+            />
 
             {availableVolumes.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
@@ -451,7 +483,7 @@ export default function StrategyFilter({
                   </table>
                 </div>
 
-                <div className="w-full md:w-[340px] md:shrink-0 flex flex-col md:overflow-y-auto">
+                <div className="w-full md:w-[380px] md:shrink-0 flex flex-col md:overflow-y-auto">
 
                   {/* Volume filter */}
                   <VolumeFilter
@@ -498,7 +530,7 @@ export default function StrategyFilter({
                       <SymbolChart
                         history={displayHistory}
                         trades={symbolTrades}
-                        height={190}
+                        height={220}
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                         <span className="bg-black/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-white backdrop-blur-sm border border-white/10 flex items-center gap-2">

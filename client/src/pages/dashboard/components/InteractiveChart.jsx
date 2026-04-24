@@ -44,16 +44,14 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
           name: "Closed P&L",
           data: closedSeries,
           type: "area",
-          color: "#10b981", // Premium emerald green
         });
       }
-      
+
       if (openSeries.length > 0) {
         result.push({
           name: "Open Projection",
           data: openSeries,
           type: "line",
-          color: "#f59e0b", // Premium amber
         });
       }
 
@@ -102,7 +100,8 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
 
   const options = {
     chart: {
-      type: "area",
+      // Must be "line" (not "area") so that per-series type: "area" / "line" are honoured
+      type: "line",
       background: "transparent",
       animations: { enabled: false },
       toolbar: {
@@ -110,7 +109,7 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
         tools: {
           download: false,
           selection: false,
-          zoom: false, // Marquee zoom removed to keep UI simple
+          zoom: false,
           zoomin: true,
           zoomout: true,
           pan: true,
@@ -120,6 +119,8 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
       },
       fontFamily: "'Inter', sans-serif, monospace",
     },
+    // Colors array is the reliable way to assign colors in ApexCharts
+    colors: ["#10b981", "#f59e0b"],
     theme: {
       mode: "dark",
     },
@@ -127,16 +128,18 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
       enabled: false,
     },
     stroke: {
-      curve: "stepline", // Correct ApexCharts curve type for step graphs
-      width: [2, 4], // Thicker line for the yellow open projection
-      dashArray: [0, 6] // Bolder dashes for the yellow line
+      curve: "stepline",
+      width: [2, 2.5],
+      dashArray: [0, 7],
     },
     fill: {
+      // "gradient" for Closed P&L area, "solid" with opacity 0 for Open Projection line
       type: ["gradient", "solid"],
+      opacity: [1, 0],
       gradient: {
         shadeIntensity: 1,
-        opacityFrom: 0.45,
-        opacityTo: 0.05,
+        opacityFrom: 0.4,
+        opacityTo: 0.03,
         stops: [0, 100],
       },
     },

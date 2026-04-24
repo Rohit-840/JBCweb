@@ -173,9 +173,9 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
             <div className="flex items-center gap-2">
               <svg width="22" height="8">
                 <line x1="0" y1="4" x2="22" y2="4"
-                  stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,3" />
+                  stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="5,3" />
               </svg>
-              <span className="text-[10px] text-amber-400/80 font-medium tracking-wide">
+              <span className="text-[10px] text-amber-400 font-semibold tracking-wide">
                 Open {pnlFmt(totalOpenPnl)}
               </span>
             </div>
@@ -250,19 +250,24 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
               return <path d={areaD} fill="url(#scOpenGrad)" />;
             })()}
 
-            {/* Open positions dashed amber line — 2 px */}
+            {/* Open positions dashed amber line — 2.5 px, brighter dashes */}
             {openPathD && (
               <path d={openPathD} fill="none"
-                stroke="#f59e0b" strokeWidth="2"
-                strokeDasharray="7,4" strokeLinecap="round" strokeLinejoin="round" />
+                stroke="#f59e0b" strokeWidth="2.5"
+                strokeDasharray="5,3" strokeLinecap="round" strokeLinejoin="round" />
             )}
 
             {/* Endpoint dot on open line */}
             {openPts.length > 0 && (() => {
               const last = openPts[openPts.length - 1];
               return (
-                <circle cx={toX(last.time)} cy={toY(last.value)} r="4"
-                  fill="#f59e0b" stroke="#111" strokeWidth="2" />
+                <>
+                  {/* Outer glow ring */}
+                  <circle cx={toX(last.time)} cy={toY(last.value)} r="7"
+                    fill="#f59e0b" fillOpacity="0.18" />
+                  <circle cx={toX(last.time)} cy={toY(last.value)} r="5"
+                    fill="#f59e0b" stroke="#111" strokeWidth="2" />
+                </>
               );
             })()}
 
