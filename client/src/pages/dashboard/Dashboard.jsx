@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar.jsx";
 import DashboardHome from "./pages/DashboardHome.jsx";
 import OpenTrades from "./pages/OpenTrades.jsx";
@@ -12,7 +12,26 @@ export default function Dashboard({ onLogout, onSwitchAccount }) {
   const [sidebarOpen, setSidebar] = useState(false);
   const { data, connected }       = useWebSocket();
 
+  // ── Browser back-button support ───────────────────────────────────────────
+  // Pressing back while on any sub-page returns to the main dashboard view.
+  // We push one history entry when leaving "dashboard" so the entry is there
+  // to pop; subsequent sub-page → sub-page navigation reuses that entry.
+  useEffect(() => {
+    const onPop = () => {
+      setPage("dashboard");
+      localStorage.setItem("dashboard_page", "dashboard");
+      setSidebar(false);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const navigate = (p) => {
+    // Push a history entry only when leaving the dashboard root for the first time,
+    // so the browser back button can bring the user back.
+    if (page === "dashboard" && p !== "dashboard") {
+      window.history.pushState({ crownstone: "sub", page: p }, "");
+    }
     setPage(p);
     localStorage.setItem("dashboard_page", p);
     setSidebar(false);
@@ -31,7 +50,7 @@ export default function Dashboard({ onLogout, onSwitchAccount }) {
 
   return (
     <div className="flex h-screen h-[100dvh] bg-[#0a0a0a] overflow-hidden">
-      {/* Mobile backdrop */}
+      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 lg:hidden"

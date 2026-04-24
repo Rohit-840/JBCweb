@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState } from "react";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function buildHistPts(history) {
   if (!history || history.length === 0) return [];
   const sorted = [...history].sort((a, b) => a.time - b.time);
@@ -12,7 +11,6 @@ function pnlFmt(v) {
   return `${v >= 0 ? "+" : "-"}$${Math.abs(v).toFixed(2)}`;
 }
 
-// Smooth cubic-bezier SVG path through an array of {x,y} points
 function smoothPath(pts) {
   return pts.reduce((acc, p, i) => {
     if (i === 0) return `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
@@ -22,12 +20,16 @@ function smoothPath(pts) {
   }, "");
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+function fmtDate(unixSec) {
+  const d = new Date(unixSec * 1000);
+  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth() + 1).padStart(2,"0")}`;
+}
+
 export default function SymbolChart({ history, trades = [], height = 260 }) {
-  const wrapRef  = useRef(null);
-  const svgRef   = useRef(null);
-  const [width,  setWidth]  = useState(400);
-  const [hover,  setHover]  = useState(null); // {x, histVal, openVal}
+  const wrapRef = useRef(null);
+  const svgRef  = useRef(null);
+  const [width, setWidth] = useState(400);
+  const [hover, setHover] = useState(null);
 
   useEffect(() => {
     const obs = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
@@ -35,56 +37,60 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
     return () => obs.disconnect();
   }, []);
 
-  const padL = 8, padR = 52, padT = 12, padB = 28;
+  // Generous padding so labels are never clipped
+  const padL = 52;   // Y-axis labels on LEFT
+  const padR = 12;
+  const padT = 18;
+  const padB = 34;   // X-axis labels on BOTTOM
   const chartW = Math.max(width - padL - padR, 10);
   const chartH = height - padT - padB;
 
-  // ── History cumulative P&L ────────────────────────────────────────────────
-  const histPts   = buildHistPts(history);
-  const hasHist   = histPts.length >= 2;
+  // ── History cumulative P&L ─────────────────────────────────────────────────
+  const histPts = buildHistPts(history);
+  const hasHist = histPts.length >= 2;
 
-  // ── Open positions "projection" line ─────────────────────────────────────
-  // A two-point line: from (last closed trade time, last cumulative P&L)
-  //                     to  (now,                  cumulative + total floating)
-  // This shows "where you stand if you closed everything now."
-  const now            = Math.floor(Date.now() / 1000);
-  const lastHistValue  = histPts.length > 0 ? histPts[histPts.length - 1].value : 0;
-  const lastHistTime   = histPts.length > 0 ? histPts[histPts.length - 1].time  : now - 3600;
-  const totalOpenPnl   = trades.reduce((s, t) => s + (t.profit || 0), 0);
-  const hasOpen        = trades.length > 0;
+  // ── Open positions stepped projection ─────────────────────────────────────
+  const now           = Math.floor(Date.now() / 1000);
+  const lastHistValue = histPts.length > 0 ? histPts[histPts.length - 1].value : 0;
+  const lastHistTime  = histPts.length > 0 ? histPts[histPts.length - 1].time  : now - 3600;
+  const totalOpenPnl  = trades.reduce((s, t) => s + (t.profit || 0), 0);
+  const hasOpen       = trades.length > 0;
 
-  // Sort open trades by open time to build a stepped projection
   const sortedTrades = hasOpen ? [...trades].sort((a, b) => a.time - b.time) : [];
   let openPts = [];
   if (hasOpen) {
     let cum = lastHistValue;
-    openPts  = [{ time: lastHistTime, value: cum }];
+    openPts = [{ time: lastHistTime, value: cum }];
     for (const t of sortedTrades) {
       const tTime = Math.max(t.time, lastHistTime);
       if (openPts[openPts.length - 1].time < tTime)
-        openPts.push({ time: tTime, value: cum });   // horizontal step
+        openPts.push({ time: tTime, value: cum });
       cum += t.profit || 0;
-      openPts.push({ time: tTime, value: cum });      // vertical step
+      openPts.push({ time: tTime, value: cum });
     }
     if (openPts[openPts.length - 1].time < now)
-      openPts.push({ time: now, value: cum });         // extend to now
+      openPts.push({ time: now, value: cum });
   }
 
-  // ── Combined scale ────────────────────────────────────────────────────────
+  // ── Combined scale — always include 0 in the value range ──────────────────
   const allVals = [0, ...histPts.map(p => p.value), ...openPts.map(p => p.value)];
   const allTs   = [...histPts.map(p => p.time), ...(hasOpen ? [now] : [])];
-  const minV  = Math.min(...allVals);
-  const maxV  = Math.max(...allVals);
+  const rawMinV = Math.min(...allVals);
+  const rawMaxV = Math.max(...allVals);
+  // Add 10 % vertical breathing room so lines don't touch the chart edges
+  const vPad = (rawMaxV - rawMinV || 1) * 0.1;
+  const minV  = rawMinV - vPad;
+  const maxV  = rawMaxV + vPad;
   const range = maxV - minV || 1;
   const minT  = allTs.length ? Math.min(...allTs) : 0;
   const maxT  = allTs.length ? Math.max(...allTs) : 1;
   const tSpan = maxT - minT || 1;
 
-  const toX = (t) => padL + ((t - minT) / tSpan) * chartW;
-  const toY = (v) => padT + (1 - (v - minV) / range) * chartH;
+  const toX  = (t) => padL + ((t - minT) / tSpan) * chartW;
+  const toY  = (v) => padT + (1 - (v - minV) / range) * chartH;
   const zeroY = toY(0);
 
-  // ── History SVG paths ─────────────────────────────────────────────────────
+  // ── SVG paths ──────────────────────────────────────────────────────────────
   let histPathD = "", histAreaD = "";
   if (hasHist) {
     const svgPts = histPts.map(p => ({ x: toX(p.time), y: toY(p.value) }));
@@ -93,34 +99,37 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
     histAreaD = `${histPathD} L ${l.x.toFixed(1)} ${zeroY.toFixed(1)} L ${f.x.toFixed(1)} ${zeroY.toFixed(1)} Z`;
   }
 
-  // ── Open positions SVG path ───────────────────────────────────────────────
   const openPathD = openPts.length >= 2
-    ? openPts.map((p, i) => `${i === 0 ? "M" : "L"} ${toX(p.time).toFixed(1)} ${toY(p.value).toFixed(1)}`).join(" ")
+    ? openPts.map((p, i) =>
+        `${i === 0 ? "M" : "L"} ${toX(p.time).toFixed(1)} ${toY(p.value).toFixed(1)}`
+      ).join(" ")
     : "";
 
-  // ── Y and X axis labels ───────────────────────────────────────────────────
-  const yLabels = (hasHist || hasOpen) ? Array.from({ length: 5 }, (_, i) => {
-    const frac = i / 4;
-    const v    = minV + frac * range;
-    return { y: padT + (1 - frac) * chartH, val: `$${v.toFixed(0)}`, pos: v >= 0 };
-  }) : [];
-
-  const xLabelTs = hasHist && histPts.length >= 2
-    ? Array.from({ length: Math.min(5, histPts.length) }, (_, i) => {
-        const idx = Math.floor((i / (Math.min(5, histPts.length) - 1)) * (histPts.length - 1));
-        return histPts[idx].time;
+  // ── Y-axis labels — 5 evenly-spaced ticks ─────────────────────────────────
+  const yTicks = (hasHist || hasOpen)
+    ? Array.from({ length: 5 }, (_, i) => {
+        const frac = i / 4;
+        const v    = minV + frac * range;
+        return { y: padT + (1 - frac) * chartH, val: `$${v.toFixed(0)}`, pos: v >= 0 };
       })
     : [];
 
-  // ── Mouse interaction ─────────────────────────────────────────────────────
+  // ── X-axis labels — up to 5 evenly-spaced dates ───────────────────────────
+  const xTicks = allTs.length >= 2
+    ? Array.from({ length: Math.min(5, allTs.length) }, (_, i) => {
+        const sorted = [...allTs].sort((a, b) => a - b);
+        const idx    = Math.floor((i / (Math.min(5, sorted.length) - 1)) * (sorted.length - 1));
+        return sorted[idx];
+      }).filter((v, i, arr) => arr.indexOf(v) === i)   // dedupe
+    : [];
+
+  // ── Mouse interaction ──────────────────────────────────────────────────────
   const onMouseMove = (e) => {
     const svg = svgRef.current;
     if (!svg) return;
-    const { left } = svg.getBoundingClientRect();
-    const mx    = e.clientX - left;
+    const mx     = e.clientX - svg.getBoundingClientRect().left;
     const mouseT = minT + ((mx - padL) / chartW) * tSpan;
 
-    // Nearest history P&L
     let histVal = null;
     if (histPts.length > 0) {
       let best = histPts[0];
@@ -129,7 +138,6 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
       histVal = best.value;
     }
 
-    // Interpolated open P&L at mouseT
     let openVal = null;
     if (openPts.length >= 2) {
       for (let i = 1; i < openPts.length; i++) {
@@ -151,30 +159,31 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
 
       {/* ── Legend ── */}
       {(hasHist || hasOpen) && (
-        <div className="flex items-center gap-4 px-1 mb-2">
+        <div className="flex items-center gap-5 px-1 mb-2.5">
           {hasHist && (
-            <div className="flex items-center gap-1.5">
-              <svg width="18" height="6">
-                <line x1="0" y1="3" x2="18" y2="3" stroke="#22c55e" strokeWidth="1.5" />
+            <div className="flex items-center gap-2">
+              <svg width="22" height="8">
+                <line x1="0" y1="4" x2="22" y2="4"
+                  stroke="#22c55e" strokeWidth="2" />
               </svg>
-              <span className="text-[9px] text-gray-500 font-mono tracking-wide">Closed P&L</span>
+              <span className="text-[10px] text-gray-400 font-medium tracking-wide">Closed P&L</span>
             </div>
           )}
           {hasOpen && (
-            <div className="flex items-center gap-1.5">
-              <svg width="18" height="6">
-                <line x1="0" y1="3" x2="18" y2="3"
-                  stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4,2" />
+            <div className="flex items-center gap-2">
+              <svg width="22" height="8">
+                <line x1="0" y1="4" x2="22" y2="4"
+                  stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,3" />
               </svg>
-              <span className="text-[9px] text-gray-500 font-mono tracking-wide">
-                Open (+{pnlFmt(totalOpenPnl)})
+              <span className="text-[10px] text-amber-400/80 font-medium tracking-wide">
+                Open {pnlFmt(totalOpenPnl)}
               </span>
             </div>
           )}
         </div>
       )}
 
-      {/* ── SVG chart ── */}
+      {/* ── SVG ── */}
       <svg
         ref={svgRef}
         width={width}
@@ -184,115 +193,138 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
         onMouseLeave={() => setHover(null)}
       >
         <defs>
-          <linearGradient id="symHistArea" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#22c55e" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#22c55e" stopOpacity="0"    />
+          <linearGradient id="scHistGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#22c55e" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="0.02" />
+          </linearGradient>
+          <linearGradient id="scOpenGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#f59e0b" stopOpacity="0.20" />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
-        {/* Grid lines */}
-        {Array.from({ length: 5 }).map((_, i) => (
+        {/* ── Axis borders ── */}
+        {/* Left Y-axis */}
+        <line x1={padL} y1={padT} x2={padL} y2={padT + chartH}
+          stroke="#2e2e2e" strokeWidth="1" />
+        {/* Bottom X-axis */}
+        <line x1={padL} y1={padT + chartH} x2={padL + chartW} y2={padT + chartH}
+          stroke="#2e2e2e" strokeWidth="1" />
+
+        {/* ── Horizontal grid lines (aligned to Y ticks) ── */}
+        {yTicks.map((tick, i) => (
           <line key={i}
-            x1={padL} y1={padT + (i / 4) * chartH}
-            x2={padL + chartW} y2={padT + (i / 4) * chartH}
-            stroke="#1c1c1c" strokeWidth="1"
+            x1={padL} y1={tick.y} x2={padL + chartW} y2={tick.y}
+            stroke="#242424" strokeWidth="1"
           />
+        ))}
+
+        {/* ── Y-axis tick labels (left side) ── */}
+        {yTicks.map((tick, i) => (
+          <text key={i}
+            x={padL - 6} y={tick.y + 4}
+            fill={tick.pos ? "#6b7280" : "#9ca3af"}
+            fontSize="10" fontFamily="monospace" textAnchor="end">
+            {tick.val}
+          </text>
         ))}
 
         {(hasHist || hasOpen) ? (
           <>
             {/* History gradient fill */}
-            {hasHist && <path d={histAreaD} fill="url(#symHistArea)" />}
-
-            {/* History line */}
-            {hasHist && (
-              <path d={histPathD} fill="none"
-                stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" />
+            {hasHist && histAreaD && (
+              <path d={histAreaD} fill="url(#scHistGrad)" />
             )}
 
-            {/* Open positions dashed line (amber) */}
+            {/* History line — bright green, 2 px */}
+            {hasHist && (
+              <path d={histPathD} fill="none"
+                stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            )}
+
+            {/* Open positions amber fill */}
+            {openPathD && hasOpen && (() => {
+              const last = openPts[openPts.length - 1];
+              const first = openPts[0];
+              const areaD = `${openPathD} L ${toX(last.time).toFixed(1)} ${zeroY.toFixed(1)} L ${toX(first.time).toFixed(1)} ${zeroY.toFixed(1)} Z`;
+              return <path d={areaD} fill="url(#scOpenGrad)" />;
+            })()}
+
+            {/* Open positions dashed amber line — 2 px */}
             {openPathD && (
               <path d={openPathD} fill="none"
-                stroke="#f59e0b" strokeWidth="1.5"
-                strokeDasharray="5,3" strokeLinecap="round" />
+                stroke="#f59e0b" strokeWidth="2"
+                strokeDasharray="7,4" strokeLinecap="round" strokeLinejoin="round" />
             )}
 
             {/* Endpoint dot on open line */}
             {openPts.length > 0 && (() => {
               const last = openPts[openPts.length - 1];
               return (
-                <circle
-                  cx={toX(last.time)} cy={toY(last.value)} r="3"
-                  fill="#f59e0b" stroke="#111" strokeWidth="1.5"
-                />
+                <circle cx={toX(last.time)} cy={toY(last.value)} r="4"
+                  fill="#f59e0b" stroke="#111" strokeWidth="2" />
               );
             })()}
 
-            {/* Zero baseline */}
-            {minV < 0 && maxV > 0 && (
+            {/* Zero baseline — always visible when range crosses 0 */}
+            {minV <= 0 && maxV >= 0 && (
               <line x1={padL} x2={padL + chartW} y1={zeroY} y2={zeroY}
-                stroke="#333" strokeWidth="1" strokeDasharray="3,3" />
+                stroke="#3d3d3d" strokeWidth="1" strokeDasharray="4,3" />
             )}
 
-            {/* Y labels */}
-            {yLabels.map((l, i) => (
-              <text key={i} x={padL + chartW + 4} y={l.y + 4}
-                fill="#4a4a4a" fontSize="9" fontFamily="monospace">{l.val}</text>
+            {/* ── X-axis tick labels ── */}
+            {xTicks.map((t, i) => (
+              <text key={i}
+                x={toX(t)} y={padT + chartH + 16}
+                fill="#6b7280" fontSize="10" textAnchor="middle" fontFamily="monospace">
+                {fmtDate(t)}
+              </text>
             ))}
 
-            {/* X labels */}
-            {xLabelTs.map((t, i) => {
-              const d = new Date(t * 1000);
-              return (
-                <text key={i} x={toX(t)} y={height - 4}
-                  fill="#4a4a4a" fontSize="9" textAnchor="middle" fontFamily="monospace">
-                  {`${d.getDate()}/${d.getMonth() + 1}`}
-                </text>
-              );
-            })}
-
-            {/* ── Hover overlay ── */}
+            {/* ── Hover crosshair + tooltip ── */}
             {hover && (() => {
               const cx = Math.max(padL, Math.min(hover.x, padL + chartW));
 
-              // Tooltip lines
               const lines = [
-                hover.histVal !== null ? { label: "Closed", val: hover.histVal, color: "#22c55e" } : null,
-                hover.openVal !== null && hasOpen ? { label: "Open  ", val: hover.openVal, color: "#f59e0b" } : null,
+                hover.histVal !== null
+                  ? { label: "Closed", val: hover.histVal, color: "#22c55e" }
+                  : null,
+                hover.openVal !== null && hasOpen
+                  ? { label: "Open  ", val: hover.openVal, color: "#f59e0b" }
+                  : null,
               ].filter(Boolean);
 
-              const bW = 130, bH = lines.length * 15 + 10;
-              const bX = cx + 10 + bW > padL + chartW ? cx - bW - 10 : cx + 10;
-              const bY = padT + 4;
+              const bW = 138, bH = lines.length * 16 + 12;
+              const bX = cx + 12 + bW > padL + chartW ? cx - bW - 12 : cx + 12;
+              const bY = padT + 6;
 
               return (
                 <g>
-                  {/* Vertical crosshair */}
+                  {/* Crosshair */}
                   <line x1={cx} y1={padT} x2={cx} y2={padT + chartH}
-                    stroke="#ffffff15" strokeWidth="1" strokeDasharray="3,3" />
+                    stroke="#ffffff28" strokeWidth="1" strokeDasharray="4,3" />
 
                   {/* Dot on history line */}
                   {hover.histVal !== null && (
-                    <circle cx={cx} cy={toY(hover.histVal)} r="3"
-                      fill="#22c55e" stroke="#0d0d0d" strokeWidth="1.5" />
+                    <circle cx={cx} cy={toY(hover.histVal)} r="4"
+                      fill="#22c55e" stroke="#0a0a0a" strokeWidth="2" />
                   )}
 
                   {/* Dot on open line */}
                   {hover.openVal !== null && hasOpen && (
-                    <circle cx={cx} cy={toY(hover.openVal)} r="3"
-                      fill="#f59e0b" stroke="#0d0d0d" strokeWidth="1.5" />
+                    <circle cx={cx} cy={toY(hover.openVal)} r="4"
+                      fill="#f59e0b" stroke="#0a0a0a" strokeWidth="2" />
                   )}
 
-                  {/* Tooltip box */}
+                  {/* Tooltip */}
                   {lines.length > 0 && (
                     <g>
                       <rect x={bX} y={bY} width={bW} height={bH}
-                        rx="3" fill="#161616" fillOpacity="0.95"
-                        stroke="#2d2d2d" strokeWidth="1" />
+                        rx="4" fill="#1a1a1a" fillOpacity="0.97"
+                        stroke="#383838" strokeWidth="1" />
                       {lines.map((ln, i) => (
-                        <text key={i}
-                          x={bX + 7} y={bY + 13 + i * 15}
-                          fill={ln.color} fontSize="9" fontFamily="monospace">
+                        <text key={i} x={bX + 8} y={bY + 14 + i * 16}
+                          fill={ln.color} fontSize="10" fontFamily="monospace" fontWeight="500">
                           {ln.label}  {pnlFmt(ln.val)}
                         </text>
                       ))}
@@ -304,7 +336,7 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
           </>
         ) : (
           <text x={padL + chartW / 2} y={padT + chartH / 2}
-            fill="#2a2a2a" fontSize="11" textAnchor="middle" dominantBaseline="middle">
+            fill="#374151" fontSize="12" textAnchor="middle" dominantBaseline="middle">
             No history data
           </text>
         )}

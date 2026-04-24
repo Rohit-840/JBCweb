@@ -67,7 +67,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
         ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
     >
-      {/* Logo */}
+      /* logo */
       <div className="flex flex-col items-center pt-7 pb-5 px-4">
         <div className="relative w-full flex items-center justify-center">
           <img src={logo} alt="JB Crownstone" className="w-16 h-16 rounded-xl object-cover" />
@@ -85,7 +85,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
 
       <div className="h-px bg-white/5 mx-4" />
 
-      {/* Nav */}
+      /* nav */
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {NAV.map((item) => {
           const active = page === item.id;
@@ -110,9 +110,9 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
         })}
       </nav>
 
-      {/* Footer */}
+      /* footer */
       <div className="px-4 pb-6 space-y-2">
-        {/* Switch account */}
+        /* switch account */
         <button
           onClick={onSwitchAccount}
           className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-yellow-500/15
@@ -125,7 +125,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
           SWITCH ACCOUNT
         </button>
 
-        {/* Connection status */}
+        /* connection status */
         <div
           className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[11px] font-semibold tracking-widest
             ${connected

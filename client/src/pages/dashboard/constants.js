@@ -6,15 +6,14 @@ export const STRATEGIES = {
   OMEGA:   ["EURUSD"],
 };
 
-// Per-strategy, per-symbol fixed T/P and S/L targets (in USD)
+// per-strategy, per-symbol fixed t/p and s/l targets (in usd)
 export const STRATEGY_CONFIG = {
   OMEGA: {
     EURUSD: { tp: 300, sl: 300 },
   },
 };
 
-// Filters a history array to only include trades that hit TP or SL
-// for symbols that have a config entry. Trades on unconfigured symbols pass through.
+
 export function applyTPSLFilter(history, strategyName, tolerance = 2) {
   const strategyCfg = STRATEGY_CONFIG[strategyName];
   if (!strategyCfg) return history;

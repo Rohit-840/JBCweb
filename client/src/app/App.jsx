@@ -27,7 +27,7 @@ function App() {
     setLoading(false);
   };
 
-  // After the splash screen, verify the JWT is still valid.
+  // after the splash screen, verify the jwt is still valid.
   useEffect(() => {
     if (loading || !token) return;
 
@@ -44,7 +44,7 @@ function App() {
       .finally(() => setChecking(false));
   }, [loading, token]);
 
-  // ── Render tree ──────────────────────────────────────────────────────────────
+  // Render tree 
   if (loading)  return <Loading onFinish={handleLoadingFinish} />;
   if (checking) return null;
   if (!token)   return <Auth onLogin={setToken} />;
@@ -59,7 +59,7 @@ function App() {
     );
   }
 
-  // After login, every user lands here — handles 0 or more accounts gracefully
+  // After login, every user lands here, handles 0 or more accounts gracefully
   if (!accountSelected) {
     return (
       <AccountSelector

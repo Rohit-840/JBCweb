@@ -2,8 +2,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Points, PointMaterial } from "@react-three/drei";
 import { useRef } from "react";
 
-// Generated once at module load — moving out of render scope satisfies the
-// React Compiler's purity rule (Math.random is impure inside useMemo).
+// generated once at module load — moving out of render scope satisfies the
+// react compiler's purity rule (math.random is impure inside useMemo).
 const PARTICLE_POSITIONS = (() => {
   const arr = new Float32Array(5000 * 3);
   for (let i = 0; i < 5000; i++) {
@@ -14,7 +14,7 @@ const PARTICLE_POSITIONS = (() => {
   return arr;
 })();
 
-// 🌌 Particle Background
+// particle background
 function Particles() {
   const positions = PARTICLE_POSITIONS;
 
@@ -31,7 +31,7 @@ function GridFloor() {
   );
 }
 
-// 🔷 Main Animated Object
+// main animated object
 function CoreObject({ mouse }) {
   const ref = useRef();
 
@@ -54,7 +54,7 @@ function CoreObject({ mouse }) {
   );
 }
 
-// 🎬 Scene Wrapper
+// scene wrapper
 export default function ThreeScene({ mouse }) {
   return (
     <Canvas camera={{ position: [0, 0, 4] }}>

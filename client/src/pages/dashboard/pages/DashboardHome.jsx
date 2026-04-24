@@ -23,20 +23,17 @@ export default function DashboardHome({ data, connected }) {
   const [strategyVolumeFilter, setStrategyVolumeFilter] = useState([]);
   const account = data?.account;
 
-  // Reset volume filter when strategy changes
+  // reset volume filter when strategy changes
   useEffect(() => { setStrategyVolumeFilter([]); }, [activeStrategy]);
 
   const strategySymbols = activeStrategy ? STRATEGIES[activeStrategy] : null;
 
-  // Upper-cased set for case-insensitive symbol matching.
-  // MT5 brokers occasionally return symbol names in different cases
-  // (e.g. "spotcrude" vs "SpotCrude") — normalising prevents invisible misses.
   const strategySymbolsUpper = useMemo(
     () => strategySymbols ? strategySymbols.map((s) => s.toUpperCase()) : null,
     [strategySymbols]
   );
 
-  // History filtered by strategy symbols, then by TP/SL if the strategy defines them
+  // history filtered by strategy symbols, then by tp/sl if the strategy defines them
   const strategyHistory = useMemo(() => {
     if (!strategySymbolsUpper) return null;
     const bySymbol = (data?.full_history || []).filter(
@@ -45,7 +42,7 @@ export default function DashboardHome({ data, connected }) {
     return applyTPSLFilter(bySymbol, activeStrategy);
   }, [strategySymbolsUpper, activeStrategy, data?.full_history]);
 
-  // Open trades filtered by strategy symbols
+  // open trades filtered by strategy symbols
   const strategyTrades = useMemo(() => {
     if (!strategySymbolsUpper) return null;
     return (data?.trades || []).filter(
@@ -53,14 +50,14 @@ export default function DashboardHome({ data, connected }) {
     );
   }, [strategySymbolsUpper, data?.trades]);
 
-  // Unique volumes available for the current strategy (for chip list)
+  // unique volumes available for the current strategy (for chip list)
   const availableStrategyVolumes = useMemo(() => {
     if (!strategyHistory) return [];
     const set = new Set(strategyHistory.map((h) => h.volume));
     return [...set].sort((a, b) => a - b);
   }, [strategyHistory]);
 
-  // History after applying volume filter — grouped in selection order
+  // history after applying volume filter — grouped in selection order
   const volumeFilteredHistory = useMemo(() => {
     if (!strategyHistory) return null;
     if (strategyVolumeFilter.length === 0) return strategyHistory;
@@ -69,7 +66,7 @@ export default function DashboardHome({ data, connected }) {
     );
   }, [strategyHistory, strategyVolumeFilter]);
 
-  // Open trades after volume filter
+  // open trades after volume filter
   const volumeFilteredTrades = useMemo(() => {
     if (!strategyTrades) return null;
     if (strategyVolumeFilter.length === 0) return strategyTrades;
@@ -78,7 +75,7 @@ export default function DashboardHome({ data, connected }) {
     );
   }, [strategyTrades, strategyVolumeFilter]);
 
-  // Chart: always chronological for correct cumulative P/L
+  // chart: always chronological for correct cumulative p/l
   const strategyChartData = useMemo(() => {
     const hist = volumeFilteredHistory;
     if (!hist || hist.length === 0) return null;
@@ -100,7 +97,7 @@ export default function DashboardHome({ data, connected }) {
 
   return (
     <div className="p-5 min-h-full">
-      {/* Header */}
+      /* Header */
       <div className="flex items-start justify-between gap-3 mb-5 flex-wrap">
         <div>
           <p className="text-[10px] tracking-[0.22em] text-gray-600 uppercase mb-1">
@@ -128,10 +125,10 @@ export default function DashboardHome({ data, connected }) {
         </div>
       </div>
 
-      {/* Stats cards */}
+      /* Stats cards */
       <StatsCards account={account} />
 
-      {/* Strategy filter */}
+      /* Strategy filter */
       <StrategyFilter
         data={data}
         activeStrategy={activeStrategy}
@@ -141,7 +138,7 @@ export default function DashboardHome({ data, connected }) {
         onVolumeFilterChange={setStrategyVolumeFilter}
       />
 
-      {/* Equity chart + analytics */}
+      /* Equity chart + analytics */
       <div className="flex flex-col lg:flex-row gap-4">
         <EquityChart
           equityHistory={data?.equityHistory}
@@ -155,7 +152,7 @@ export default function DashboardHome({ data, connected }) {
         />
       </div>
 
-      {/* Open trades + history */}
+      /* Open trades + history */
       <TradeSummary
         trades={strategyTrades ?? data?.trades ?? []}
         fullHistory={strategyHistory ?? data?.full_history ?? []}

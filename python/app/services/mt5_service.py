@@ -159,7 +159,7 @@ def get_history_with_orders(days: int = 365) -> list:
         print(f"[MT5] history_deals_get failed code={code}: {msg}")
         return []
 
-    print(f"[MT5] history_deals_get: {len(all_deals)} raw deals over {days}d")
+    # print(f"[MT5] history_deals_get: {len(all_deals)} raw deals over {days}d")
 
     # ── Pass 1: build maps ────────────────────────────────────────────────────
     opening_map:    dict = {}   # position_id → opening deal
@@ -216,8 +216,8 @@ def get_history_with_orders(days: int = 365) -> list:
     for r in result:
         per_sym[r["symbol"]] = per_sym.get(r["symbol"], 0) + 1
 
-    print(f"[MT5] full_history: {len(result)} closing deals "
-          f"(skipped {skipped_no_symbol} empty-symbol) | {per_sym}")
+    # print(f"[MT5] full_history: {len(result)} closing deals "
+    #       f"(skipped {skipped_no_symbol} empty-symbol) | {per_sym}")
 
     return sorted(result, key=lambda x: x["time"], reverse=True)
 

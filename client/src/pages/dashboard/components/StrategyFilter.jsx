@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { STRATEGIES, STRATEGY_CONFIG, applyTPSLFilter } from "../constants.js";
 import SymbolChart from "./SymbolChart.jsx";
 
-/* ── helpers ── */
+/* helpers */
 function TypeBadge({ type }) {
   const isBuy = type === 0;
   return (
@@ -52,7 +52,7 @@ function StatCard({ label, value, color = "text-white" }) {
   );
 }
 
-/* ── Volume Filter panel (right side, above chart) ── */
+/* volume filter panel (right side, above chart) */
 function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
   const availableVolumes = useMemo(() => {
     const set = new Set(symbolHistory.map((h) => h.volume));
@@ -67,7 +67,6 @@ function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
         Volume Filter
       </p>
 
-      {/* Text input + clear */}
       <div className="flex gap-2 mb-2.5">
         <input
           type="number"
@@ -92,7 +91,6 @@ function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
         )}
       </div>
 
-      {/* Quick-select chips */}
       {availableVolumes.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {availableVolumes.map((vol) => {
@@ -117,13 +115,43 @@ function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
   );
 }
 
-/* ── Main component ── */
+/* main component */
 export default function StrategyFilter({
   data, activeStrategy, onStrategyChange,
   availableVolumes = [], volumeFilter = [], onVolumeFilterChange,
 }) {
-  const [popup, setPopup]                   = useState(null);
-  const [popupVolume, setPopupVolume]       = useState("");
+  const [popup, setPopup]             = useState(null);
+  const [popupVolume, setPopupVolume] = useState("");
+
+  // ── Popup history + keyboard interaction ──────────────────────────────────
+  // Push a browser-history entry when the popup opens so that:
+  //   • pressing Back closes the popup (not the whole page)
+  //   • pressing Escape closes the popup
+  //   • clicking outside (backdrop) or the × button also pops the entry
+  useEffect(() => {
+    if (popup) window.history.pushState({ crownstone: "popup", symbol: popup }, "");
+  }, [popup]);
+
+  useEffect(() => {
+    const onPop = () => setPopup(null);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    if (!popup) return;
+    const onKey = (e) => { if (e.key === "Escape") closePopup(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [popup]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close via UI (×, backdrop, strategy change) — also pops the history entry
+  // so the back button isn't "used up" by an already-dismissed popup.
+  const closePopup = () => {
+    if (!popup) return;
+    setPopup(null);
+    window.history.back(); // pops the entry we pushed on open
+  };
 
   // Reset popup volume filter when symbol changes
   useEffect(() => { setPopupVolume(""); }, [popup]);
@@ -137,15 +165,15 @@ export default function StrategyFilter({
 
   const handleStrategy = (name) => {
     onStrategyChange(activeStrategy === name ? null : name);
-    setPopup(null);
+    closePopup();
   };
 
   const handleReset = () => {
     onStrategyChange(null);
-    setPopup(null);
+    closePopup();
   };
 
-  /* All history for the selected symbol, filtered by TP/SL if strategy defines them */
+  /* all history for the selected symbol, filtered by TP/SL if strategy defines them */
   const symbolHistory = useMemo(() => {
     if (!popup) return [];
     const upper = popup.toUpperCase();
@@ -164,7 +192,7 @@ export default function StrategyFilter({
     [popup, data?.trades]
   );
 
-  /* Volume-filtered history — drives table, chart AND stats */
+  /* volume-filtered history — drives table, chart AND stats */
   const displayHistory = useMemo(() => {
     const raw = popupVolume.trim();
     if (!raw) return symbolHistory;
@@ -178,7 +206,6 @@ export default function StrategyFilter({
 
   return (
     <>
-      {/* ── Strategy bar ── */}
       <div className="bg-[#111] rounded-xl px-4 py-3.5 border border-white/5 mb-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -247,7 +274,6 @@ export default function StrategyFilter({
               })}
             </div>
 
-            {/* Strategy-level volume multi-select */}
             {availableVolumes.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[9px] text-gray-600 uppercase tracking-widest shrink-0">
@@ -292,12 +318,11 @@ export default function StrategyFilter({
         )}
       </div>
 
-      {/* ── Symbol detail modal ── */}
       {popup && (
         <>
           <div
             className="fixed inset-0 bg-black/75 backdrop-blur-sm z-40"
-            onClick={() => setPopup(null)}
+            onClick={closePopup}
           />
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
@@ -306,7 +331,6 @@ export default function StrategyFilter({
                 w-[95vw] md:w-[90vw] max-w-[1180px]"
               style={{ height: "90vh" }}
             >
-              {/* Modal header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
                 <div className="flex items-center gap-4 flex-wrap">
                   <div>
@@ -342,14 +366,13 @@ export default function StrategyFilter({
                   )}
                 </div>
                 <button
-                  onClick={() => setPopup(null)}
+                  onClick={closePopup}
                   className="text-gray-500 hover:text-white text-3xl leading-none transition-colors"
                 >
                   ×
                 </button>
               </div>
 
-              {/* Stats row — updates with volume filter */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 md:px-6 py-4 border-b border-white/5 shrink-0">
                 <StatCard label="Total Trades" value={stats.total} />
                 <StatCard
@@ -369,10 +392,8 @@ export default function StrategyFilter({
                 />
               </div>
 
-              {/* Body: table (left) + filter+chart (right) */}
               <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
 
-                {/* ── Left: history table ── */}
                 <div className="md:flex-1 md:overflow-y-auto border-b md:border-b-0 md:border-r border-white/5 md:min-h-0">
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-[#0d0d0d] z-10">
@@ -425,7 +446,6 @@ export default function StrategyFilter({
                   </table>
                 </div>
 
-                {/* ── Right: volume filter + chart + open positions ── */}
                 <div className="w-full md:w-[340px] md:shrink-0 flex flex-col md:overflow-y-auto">
 
                   {/* Volume filter */}
@@ -435,7 +455,6 @@ export default function StrategyFilter({
                     setVolumeFilter={setPopupVolume}
                   />
 
-                  {/* Trade breakdown — updates with volume filter */}
                   <div className="px-4 pt-3 pb-3 border-b border-white/5 shrink-0 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-gray-600 uppercase tracking-widest">Profitable Trades</span>
@@ -453,7 +472,6 @@ export default function StrategyFilter({
                     </div>
                   </div>
 
-                  {/* Chart */}
                   <div className="p-4 shrink-0">
                     <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest mb-0.5">
                       Cumulative P/L
@@ -467,16 +485,18 @@ export default function StrategyFilter({
                       )}
                     </p>
 
-                    {/* key forces smooth remount when filter changes */}
                     <div
                       key={`${popup}-${popupVolume}`}
                       className="transition-opacity duration-300"
                     >
-                      <SymbolChart history={displayHistory} height={190} />
+                      <SymbolChart
+                        history={displayHistory}
+                        trades={symbolTrades}
+                        height={190}
+                      />
                     </div>
                   </div>
 
-                  {/* Open positions */}
                   {symbolTrades.length > 0 && (
                     <div className="px-4 pb-4 border-t border-white/5 pt-3 shrink-0">
                       <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest mb-2">

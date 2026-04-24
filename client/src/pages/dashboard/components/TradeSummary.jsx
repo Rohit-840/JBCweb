@@ -58,7 +58,7 @@ function EmptyRow({ cols, msg }) {
   );
 }
 
-/* ─── Open Trades mini table ─── */
+/* open trades mini table */
 function OpenTradesPanel({ trades }) {
   return (
     <div className="bg-[#111] rounded-xl border border-white/5 overflow-hidden flex-1">
@@ -116,13 +116,13 @@ function OpenTradesPanel({ trades }) {
   );
 }
 
-/* ─── Recent History mini table with pagination ─── */
+/* recent history mini table with pagination */
 const PAGE_SIZE = 10;
 
 function HistoryPanel({ history, resetKey }) {
   const [page, setPage] = useState(0);
 
-  // Only reset when strategy changes, not on every WebSocket tick
+  // only reset when strategy changes, not on every webSocket tick
   useEffect(() => { setPage(0); }, [resetKey]);
 
   const totalPages = Math.max(1, Math.ceil(history.length / PAGE_SIZE));
@@ -217,9 +217,9 @@ function HistoryPanel({ history, resetKey }) {
   );
 }
 
-/* ─── Main export ─── */
+/* main export */
 export default function TradeSummary({ trades, fullHistory, strategySymbols, strategyVolumeFilter = [] }) {
-  // Step 1: filter by strategy symbols
+  // step 1: filter by strategy symbols
   const symbolTrades = strategySymbols
     ? trades.filter((t) => strategySymbols.includes(t.symbol))
     : trades;
@@ -228,13 +228,13 @@ export default function TradeSummary({ trades, fullHistory, strategySymbols, str
     ? fullHistory.filter((h) => strategySymbols.includes(h.symbol))
     : fullHistory;
 
-  // Step 2: apply volume filter
-  // Open trades — simple union filter
+  // step 2: apply volume filter
+  // open trades — simple union filter
   const filteredTrades = strategyVolumeFilter.length > 0
     ? symbolTrades.filter((t) => strategyVolumeFilter.some((v) => Math.abs(t.volume - v) < 0.0001))
     : symbolTrades;
 
-  // History — grouped in selection order (all vol[0] trades, then vol[1], etc.)
+  // history — grouped in selection order (all vol[0] trades, then vol[1], etc.)
   const filteredHistory = strategyVolumeFilter.length > 0
     ? strategyVolumeFilter.flatMap((vol) =>
         symbolHistory.filter((h) => Math.abs(h.volume - vol) < 0.0001)

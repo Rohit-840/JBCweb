@@ -7,7 +7,7 @@ export default function Loading({ onFinish }) {
   const [exit, setExit] = useState(false);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
 
-  // 🎯 Mouse tracking
+  // mouse tracking
   useEffect(() => {
     const handleMove = (e) => {
       const x = (e.clientX / window.innerWidth - 0.5) * 2;

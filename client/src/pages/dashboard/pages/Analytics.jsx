@@ -1,38 +1,58 @@
 export default function Analytics({ data }) {
   const analytics = data?.analytics;
-  const trades    = data?.trades   || [];
-  const history   = (data?.history || []).filter((h) => h.entry === 1);
+  const trades    = data?.trades       || [];
+
+  // full_history covers 365 days and already has the position_id symbol-recovery
+  // fix applied in Python, so SpotCrude and other CFD instruments appear correctly.
+  // (data.history is only 7 days and used just for the analytics object server-side.)
+  const closed = data?.full_history || [];
 
   const totalOpenProfit   = trades.reduce((s, t) => s + (t.profit || 0), 0);
-  const totalClosedProfit = history.reduce((s, h) => s + (h.profit || 0), 0);
-  const winTrades  = history.filter((h) => h.profit > 0);
-  const lossTrades = history.filter((h) => h.profit < 0);
+  const totalClosedProfit = closed.reduce((s, h) => s + (h.profit || 0), 0);
+  const winTrades         = closed.filter((h) => h.profit > 0);
+  const lossTrades        = closed.filter((h) => h.profit < 0);
 
-  const bySymbol = history.reduce((acc, h) => {
-    acc[h.symbol] = (acc[h.symbol] || 0) + h.profit;
+  // Closed P&L grouped by symbol (from full 365-day history)
+  const closedBySymbol = closed.reduce((acc, h) => {
+    if (h.symbol) acc[h.symbol] = (acc[h.symbol] || 0) + h.profit;
     return acc;
   }, {});
-  const symbolRows = Object.entries(bySymbol).sort((a, b) => b[1] - a[1]);
+
+  // Open floating P&L grouped by symbol (live positions)
+  const openBySymbol = trades.reduce((acc, t) => {
+    if (t.symbol) acc[t.symbol] = (acc[t.symbol] || 0) + (t.profit || 0);
+    return acc;
+  }, {});
+
+  // All symbols across both closed and open
+  const allSymbols = [...new Set([
+    ...Object.keys(closedBySymbol),
+    ...Object.keys(openBySymbol),
+  ])].sort((a, b) => {
+    const totalA = (closedBySymbol[a] || 0) + (openBySymbol[a] || 0);
+    const totalB = (closedBySymbol[b] || 0) + (openBySymbol[b] || 0);
+    return totalB - totalA;
+  });
 
   const summary = [
     {
       label: "Total Closed P/L",
-      val: `${totalClosedProfit >= 0 ? "+" : ""}$${totalClosedProfit.toFixed(2)}`,
+      val:   `${totalClosedProfit >= 0 ? "+" : ""}$${totalClosedProfit.toFixed(2)}`,
       color: totalClosedProfit >= 0 ? "text-green-400" : "text-red-400",
     },
     {
       label: "Open P/L",
-      val: `${totalOpenProfit >= 0 ? "+" : ""}$${totalOpenProfit.toFixed(2)}`,
+      val:   `${totalOpenProfit >= 0 ? "+" : ""}$${totalOpenProfit.toFixed(2)}`,
       color: totalOpenProfit >= 0 ? "text-green-400" : "text-red-400",
     },
     {
       label: "Win Rate",
-      val: `${(analytics?.win_rate ?? 0).toFixed(1)}%`,
+      val:   `${(analytics?.win_rate ?? 0).toFixed(1)}%`,
       color: "text-yellow-400",
     },
     {
       label: "Avg Profit",
-      val: `$${(analytics?.avg_profit ?? 0).toFixed(2)}`,
+      val:   `$${(analytics?.avg_profit ?? 0).toFixed(2)}`,
       color: "text-white",
     },
   ];
@@ -50,25 +70,23 @@ export default function Analytics({ data }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {summary.map((c) => (
           <div key={c.label} className="bg-[#111] rounded-xl p-4 border border-white/5">
-            <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">
-              {c.label}
-            </p>
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{c.label}</p>
             <p className={`text-xl font-bold ${c.color}`}>{c.val}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Win / Loss */}
+        {/* Win / Loss breakdown */}
         <div className="bg-[#111] rounded-xl p-5 border border-white/5">
           <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">
             Win / Loss Breakdown
           </p>
           <div className="space-y-3">
             {[
-              { label: "Winning Trades", val: winTrades.length, color: "text-green-400" },
-              { label: "Losing Trades",  val: lossTrades.length, color: "text-red-400" },
-              { label: "Total Closed",   val: history.length,    color: "text-white", divider: true },
+              { label: "Winning Trades", val: winTrades.length,  color: "text-green-400" },
+              { label: "Losing Trades",  val: lossTrades.length, color: "text-red-400"   },
+              { label: "Total Closed",   val: closed.length,     color: "text-white", divider: true },
               { label: "Open Positions", val: trades.length,     color: "text-white" },
             ].map(({ label, val, color, divider }) => (
               <div
@@ -82,27 +100,53 @@ export default function Analytics({ data }) {
           </div>
         </div>
 
-        {/* P/L by symbol */}
+        {/* P/L by symbol — closed + open side by side */}
         <div className="bg-[#111] rounded-xl p-5 border border-white/5">
           <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">
             P / L by Symbol
           </p>
-          {symbolRows.length === 0 ? (
-            <p className="text-gray-700 text-sm">No closed trade data yet</p>
+          {allSymbols.length === 0 ? (
+            <p className="text-gray-700 text-sm">No trade data yet</p>
           ) : (
-            <div className="space-y-2.5">
-              {symbolRows.map(([sym, pnl]) => (
-                <div key={sym} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-300">{sym}</span>
-                  <span
-                    className={`text-sm font-semibold ${
-                      pnl >= 0 ? "text-green-400" : "text-red-400"
-                    }`}
-                  >
-                    {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
-                  </span>
+            <div className="space-y-0">
+              {/* Column headers */}
+              <div className="flex justify-between items-center pb-2 mb-1 border-b border-white/5">
+                <span className="text-[9px] text-gray-600 uppercase tracking-widest">Symbol</span>
+                <div className="flex gap-6">
+                  <span className="text-[9px] text-gray-600 uppercase tracking-widest text-right w-20">Closed</span>
+                  <span className="text-[9px] text-amber-600/70 uppercase tracking-widest text-right w-20">Open</span>
                 </div>
-              ))}
+              </div>
+
+              <div className="space-y-2">
+                {allSymbols.map((sym) => {
+                  const cl = closedBySymbol[sym] ?? null;
+                  const op = openBySymbol[sym]   ?? null;
+                  return (
+                    <div key={sym} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-300 font-medium">{sym}</span>
+                      <div className="flex gap-6">
+                        {/* Closed P&L */}
+                        <span className={`text-sm font-semibold text-right w-20 ${
+                          cl === null ? "text-gray-700"
+                            : cl >= 0  ? "text-green-400"
+                            : "text-red-400"
+                        }`}>
+                          {cl === null ? "—" : `${cl >= 0 ? "+" : ""}$${cl.toFixed(2)}`}
+                        </span>
+                        {/* Open floating P&L */}
+                        <span className={`text-sm font-semibold text-right w-20 ${
+                          op === null ? "text-gray-700"
+                            : op >= 0  ? "text-amber-400"
+                            : "text-red-400"
+                        }`}>
+                          {op === null ? "—" : `${op >= 0 ? "+" : ""}$${op.toFixed(2)}`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
