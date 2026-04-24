@@ -23,6 +23,17 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
   mt5Accounts: [mt5Schema],
+
+  // Stores the user's strategy customisations as delta objects
+  // (added symbols + removed symbols) per strategy name.
+  strategyCustomizations: {
+    type: Map,
+    of: new mongoose.Schema({
+      added:   { type: [String], default: [] },
+      removed: { type: [String], default: [] },
+    }, { _id: false }),
+    default: () => new Map(),
+  },
 }, { timestamps: true });
 
 export default mongoose.model("User", userSchema);

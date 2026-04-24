@@ -12,9 +12,11 @@
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
+    "apexcharts": "^5.10.6",
     "axios": "^1.15.0",
     "framer-motion": "^12.38.0",
     "react": "^19.2.4",
+    "react-apexcharts": "^2.1.0",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.1",
     "three": "^0.184.0",

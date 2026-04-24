@@ -86,4 +86,9 @@ async def dashboard_stream(websocket: WebSocket):
             await asyncio.sleep(1)
 
     except (WebSocketDisconnect, ConnectionClosedError, ConnectionClosedOK):
-        pass
+        pass   # normal client disconnect — no action needed
+    except Exception as exc:
+        # Catch anything else (MT5 error mid-send, serialisation failure, etc.)
+        # so the handler exits cleanly instead of sending TCP RST to the Vite proxy,
+        # which would appear as "ws proxy error: ECONNRESET" in the terminal.
+        print(f"[WS] stream error: {exc}")

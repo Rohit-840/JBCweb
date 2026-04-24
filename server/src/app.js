@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import mt5Routes from "./routes/mt5.routes.js";
+import strategiesRoutes from "./routes/strategies.routes.js";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use("/api/mt5", mt5Routes);
+app.use("/api/strategies", strategiesRoutes);
 
 // ✅ Health check route
 app.get("/", (req, res) => {

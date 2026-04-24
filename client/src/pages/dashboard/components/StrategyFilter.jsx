@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { STRATEGIES, STRATEGY_CONFIG, applyTPSLFilter } from "../constants.js";
 import SymbolChart from "./SymbolChart.jsx";
-
-/* helpers */
+import InteractiveChart from "./InteractiveChart.jsx";/* helpers */
 function TypeBadge({ type }) {
   const isBuy = type === 0;
   return (
@@ -122,6 +121,7 @@ export default function StrategyFilter({
 }) {
   const [popup, setPopup]             = useState(null);
   const [popupVolume, setPopupVolume] = useState("");
+  const [interactiveChartOpen, setInteractiveChartOpen] = useState(false);
 
   // ── Popup history + keyboard interaction ──────────────────────────────────
   // Push a browser-history entry when the popup opens so that:
@@ -140,10 +140,15 @@ export default function StrategyFilter({
 
   useEffect(() => {
     if (!popup) return;
-    const onKey = (e) => { if (e.key === "Escape") closePopup(); };
+    const onKey = (e) => { 
+      if (e.key === "Escape") {
+        if (interactiveChartOpen) setInteractiveChartOpen(false);
+        else closePopup(); 
+      }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [popup]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [popup, interactiveChartOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close via UI (×, backdrop, strategy change) — also pops the history entry
   // so the back button isn't "used up" by an already-dismissed popup.
@@ -487,13 +492,20 @@ export default function StrategyFilter({
 
                     <div
                       key={`${popup}-${popupVolume}`}
-                      className="transition-opacity duration-300"
+                      className="transition-opacity duration-300 relative group cursor-pointer"
+                      onClick={() => setInteractiveChartOpen(true)}
                     >
                       <SymbolChart
                         history={displayHistory}
                         trades={symbolTrades}
                         height={190}
                       />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                        <span className="bg-black/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-white backdrop-blur-sm border border-white/10 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                          Expand Graph
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -526,6 +538,39 @@ export default function StrategyFilter({
             </div>
           </div>
         </>
+      )}
+
+      {interactiveChartOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-md">
+          <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden relative">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/20">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="text-yellow-500">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                  </span>
+                  {popup} Interactive Graph
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  Zoom, pan, and analyze historical performance
+                </p>
+              </div>
+              <button
+                onClick={() => setInteractiveChartOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 p-2 md:p-4 min-h-0">
+              <InteractiveChart
+                history={displayHistory}
+                trades={symbolTrades}
+                title={`${popup} Performance`}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
