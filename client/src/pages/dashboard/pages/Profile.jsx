@@ -21,7 +21,7 @@ export default function Profile({ data, onLogout, onSwitchAccount }) {
       </div>
 
       <div className="max-w-lg space-y-4">
-        /* portal */
+        {/* portal */}
         <div className="bg-[#111] rounded-xl p-5 border border-white/5">
           <p className="text-[10px] text-yellow-400/70 uppercase tracking-widest mb-4">
             Portal Account
@@ -32,7 +32,7 @@ export default function Profile({ data, onLogout, onSwitchAccount }) {
           </div>
         </div>
 
-        /* mt5 */
+        {/* mt5 */}
         <div className="bg-[#111] rounded-xl p-5 border border-white/5">
           <p className="text-[10px] text-yellow-400/70 uppercase tracking-widest mb-4">
             MT5 Account
@@ -50,7 +50,7 @@ export default function Profile({ data, onLogout, onSwitchAccount }) {
           </div>
         </div>
 
-        /* switch account */
+        {/* switch account */}
         <button
           onClick={onSwitchAccount}
           className="w-full py-3 rounded-xl bg-yellow-500/8 border border-yellow-500/20 text-yellow-400/80
@@ -62,7 +62,7 @@ export default function Profile({ data, onLogout, onSwitchAccount }) {
           Switch Account
         </button>
 
-        /* logout */
+        {/* logout */}
         <button
           onClick={onLogout}
           className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition-all"

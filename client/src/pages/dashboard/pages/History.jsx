@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function TypeBadge({ type }) {
   const isBuy = type === 0;
   return (
@@ -20,30 +21,77 @@ function fmtTime(ts) {
   });
 }
 
+// ── Time period filter config ─────────────────────────────────────────────────
+const TIME_FILTERS = [
+  { label: "All", days: null },
+  { label: "1Y",  days: 365  },
+  { label: "1M",  days: 30   },
+  { label: "1D",  days: 1    },
+];
+
+function TimeFilter({ active, onChange }) {
+  return (
+    <div className="flex items-center bg-[#0a0a0a] border border-white/[0.07] rounded-lg p-[3px] gap-[2px]">
+      {TIME_FILTERS.map(({ label }) => {
+        const isActive = active === label;
+        return (
+          <button
+            key={label}
+            onClick={() => onChange(label)}
+            className={[
+              "px-3 py-1.5 rounded-md text-[10px] font-bold tracking-[0.14em] transition-all duration-200",
+              isActive ? "text-yellow-400 bg-yellow-500/[0.12]" : "text-gray-600 hover:text-gray-400",
+            ].join(" ")}
+            style={isActive ? {
+              boxShadow: "0 0 10px rgba(234,179,8,0.18), inset 0 0 8px rgba(234,179,8,0.06)",
+              border: "1px solid rgba(234,179,8,0.25)",
+            } : { border: "1px solid transparent" }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Table columns ─────────────────────────────────────────────────────────────
 const COLS = ["Ticket", "Symbol", "Type", "Volume", "Close Time", "Profit"];
 
+// ── Main component ────────────────────────────────────────────────────────────
 export default function History({ data, filteredSymbols }) {
-  const [query, setQuery] = useState("");
+  const [query,      setQuery]      = useState("");
+  const [timePeriod, setTimePeriod] = useState("All");
 
-  const base = useMemo(
+  // 1 — symbol filter (from parent)
+  const symbolFiltered = useMemo(
     () => (data?.full_history || []).filter(
       (h) => !filteredSymbols || filteredSymbols.includes(h.symbol)
     ),
     [data?.full_history, filteredSymbols]
   );
 
-  // Search by ticket number, symbol, or type keyword (buy/sell)
+  // 2 — time period filter
+  const periodFiltered = useMemo(() => {
+    const cfg = TIME_FILTERS.find((f) => f.label === timePeriod);
+    if (!cfg?.days) return symbolFiltered;
+    const cutoff = Math.floor(Date.now() / 1000) - cfg.days * 86_400;
+    return symbolFiltered.filter((h) => h.time >= cutoff);
+  }, [symbolFiltered, timePeriod]);
+
+  // 3 — search filter
   const history = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return base;
-    return base.filter((h) =>
-      String(h.ticket).includes(q) ||
-      h.symbol?.toLowerCase().includes(q) ||
-      (h.type === 0 ? "buy" : "sell").includes(q)
+    if (!q) return periodFiltered;
+    return periodFiltered.filter(
+      (h) =>
+        String(h.ticket).includes(q) ||
+        h.symbol?.toLowerCase().includes(q) ||
+        (h.type === 0 ? "buy" : "sell").includes(q)
     );
-  }, [base, query]);
+  }, [periodFiltered, query]);
 
-  const total    = base.length;
+  const total    = periodFiltered.length;
   const matched  = history.length;
   const hasQuery = query.trim().length > 0;
 
@@ -51,20 +99,23 @@ export default function History({ data, filteredSymbols }) {
     <div className="p-5 min-h-full">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div>
-          <p className="text-[10px] tracking-[0.22em] text-yellow-400/60 uppercase mb-1">
-            Full History
-          </p>
-          <h1 className="text-3xl font-bold text-white tracking-wider">Trade History</h1>
-          <p className="text-gray-600 text-xs mt-1">
-            {hasQuery
-              ? `${matched} of ${total} trade${total !== 1 ? "s" : ""}`
-              : `${total} trade${total !== 1 ? "s" : ""}`}
-          </p>
-        </div>
+      <div className="mb-5">
+        <p className="text-[10px] tracking-[0.22em] text-yellow-400/60 uppercase mb-1">
+          Full History
+        </p>
+        <h1 className="text-3xl font-bold text-white tracking-wider">Trade History</h1>
+        <p className="text-gray-600 text-xs mt-1">
+          {hasQuery
+            ? `${matched} of ${total} trade${total !== 1 ? "s" : ""}`
+            : `${total} trade${total !== 1 ? "s" : ""}`}
+        </p>
+      </div>
 
-        {/* ── Search bar ── */}
+      {/* ── Controls row: period filter + search ── */}
+      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <TimeFilter active={timePeriod} onChange={setTimePeriod} />
+
+        {/* Search bar */}
         <div className="relative w-full sm:w-72">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600 pointer-events-none"
@@ -119,6 +170,8 @@ export default function History({ data, filteredSymbols }) {
                   <td colSpan={COLS.length} className="px-5 py-12 text-center text-gray-700 text-sm">
                     {hasQuery
                       ? `No trades matching "${query}"`
+                      : timePeriod !== "All"
+                      ? `No closed trades in the last ${timePeriod}`
                       : "No trade history"}
                   </td>
                 </tr>
@@ -128,7 +181,7 @@ export default function History({ data, filteredSymbols }) {
                     key={`${h.ticket}-${i}`}
                     className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
                   >
-                    {/* Ticket — highlighted when it matches the search query */}
+                    {/* Ticket — highlighted when it matches search */}
                     <td className="px-5 py-3.5 font-mono text-xs">
                       {hasQuery && String(h.ticket).includes(query.trim()) ? (
                         <span className="text-yellow-400 font-semibold">{h.ticket}</span>

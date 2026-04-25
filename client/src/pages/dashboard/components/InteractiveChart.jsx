@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ReactApexChart from "react-apexcharts";
 
 export default function InteractiveChart({ history = [], trades = [], title = "" }) {
+  const [userBounds, setUserBounds] = useState(null);
+
   const { seriesData, maxX, minX } = useMemo(() => {
     try {
       // 1. Build Closed P&L series safely
@@ -100,7 +102,6 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
 
   const options = {
     chart: {
-      // Must be "line" (not "area") so that per-series type: "area" / "line" are honoured
       type: "line",
       background: "transparent",
       animations: { enabled: false },
@@ -118,8 +119,21 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
         autoSelected: "pan",
       },
       fontFamily: "'Inter', sans-serif, monospace",
+      events: {
+        zoomed: function(chartContext, { xaxis }) {
+          if (xaxis && xaxis.min !== undefined && xaxis.max !== undefined) {
+            setUserBounds({ min: xaxis.min, max: xaxis.max });
+          } else {
+            setUserBounds(null); // Reset zoom
+          }
+        },
+        scrolled: function(chartContext, { xaxis }) {
+          if (xaxis && xaxis.min !== undefined && xaxis.max !== undefined) {
+            setUserBounds({ min: xaxis.min, max: xaxis.max });
+          }
+        }
+      }
     },
-    // Colors array is the reliable way to assign colors in ApexCharts
     colors: ["#10b981", "#f59e0b"],
     theme: {
       mode: "dark",
@@ -130,14 +144,15 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
     stroke: {
       curve: "stepline",
       width: [2, 2.5],
-      dashArray: [0, 7],
+      dashArray: [0, 5],
     },
     fill: {
-      // "gradient" for Closed P&L area, "solid" with opacity 0 for Open Projection line
       type: ["gradient", "solid"],
-      opacity: [1, 0],
+      opacity: [1, 1],
       gradient: {
-        shadeIntensity: 1,
+        inverseColors: false,
+        shade: 'dark',
+        type: 'vertical',
         opacityFrom: 0.4,
         opacityTo: 0.03,
         stops: [0, 100],
@@ -145,8 +160,8 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
     },
     xaxis: {
       type: "datetime",
-      max: maxX,
-      min: minX,
+      max: userBounds ? userBounds.max : maxX,
+      min: userBounds ? userBounds.min : minX,
       tooltip: {
         enabled: false,
       },
@@ -230,11 +245,19 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
   return (
     <div className="w-full h-full relative flex items-center justify-center min-h-[350px]">
       <div className="absolute inset-0">
+        {userBounds && (
+          <button
+            onClick={() => setUserBounds(null)}
+            className="absolute top-2 right-32 z-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs px-3 py-1.5 rounded shadow-lg transition-colors duration-200"
+          >
+            Resume Live Tracking
+          </button>
+        )}
         {seriesData && seriesData.length > 0 ? (
           <ReactApexChart
             options={options}
             series={seriesData}
-            type="area"
+            type="line"
             height="100%"
             width="100%"
           />

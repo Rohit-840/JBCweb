@@ -112,7 +112,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
 
       /* footer */
       <div className="px-4 pb-6 space-y-2">
-        /* switch account */
+        {/* switch account */}
         <button
           onClick={onSwitchAccount}
           className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-yellow-500/15
@@ -125,7 +125,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
           SWITCH ACCOUNT
         </button>
 
-        /* connection status */
+        {/* connection status */}
         <div
           className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[11px] font-semibold tracking-widest
             ${connected

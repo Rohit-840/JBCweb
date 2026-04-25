@@ -201,6 +201,8 @@ export default function DashboardHome({ data, connected }) {
       <div className="flex flex-col lg:flex-row gap-4">
         <EquityChart
           equityHistory={data?.equityHistory}
+          fullHistory={data?.full_history}
+          account={data?.account}
           strategyData={strategyChartData}
           strategyName={activeStrategy}
         />

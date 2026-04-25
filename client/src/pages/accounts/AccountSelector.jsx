@@ -83,12 +83,12 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
           : "border-yellow-500/15 bg-[#0d0d0d] cursor-pointer hover:border-yellow-500/40 hover:bg-[#111] hover:shadow-[0_0_40px_rgba(255,215,0,0.05)]",
       ].join(" ")}
     >
-      /* Hover glow */
+      {/* Hover glow */}
       {!offline && (
         <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-yellow-500/[0.03] to-transparent pointer-events-none" />
       )}
 
-      /* delete confirmation overlay */
+      {/* delete confirmation overlay */}
       <AnimatePresence>
         {confirmDelete && (
           <motion.div
@@ -100,7 +100,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
               flex flex-col items-center justify-center gap-5 px-6"
             onClick={(e) => e.stopPropagation()}
           >
-            /* Warning icon */
+        {/* Warning icon */}
             <div className="w-14 h-14 rounded-full bg-red-500/20 border-2 border-red-500/60 flex items-center justify-center">
               <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
@@ -144,7 +144,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
         )}
       </AnimatePresence>
 
-      /* header row */
+      {/* header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-bold tracking-[0.18em] text-yellow-500/50 uppercase mb-1">
@@ -154,7 +154,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
           <p className="text-gray-500 text-xs mt-0.5 truncate max-w-[160px]">{account.server}</p>
         </div>
 
-        /* Status badge and delete button stacked */
+        {/* Status badge and delete button stacked */}
         <div className="flex flex-col items-end gap-2 shrink-0">
           {offline ? (
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20">
@@ -168,7 +168,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
             </span>
           )}
 
-          /* trash button, always visible, subtle until hovered */
+          {/* trash button, always visible, subtle until hovered */}
           <button
             onClick={openConfirm}
             title="Remove account"
@@ -186,7 +186,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
         </div>
       </div>
 
-      /* Stats */
+      {/* Stats */}
       {!offline && (
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -364,11 +364,11 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-[#0a0a0a] relative overflow-y-auto">
-      /* ambient glows */
+      {/* ambient glows */}
       <div className="fixed pointer-events-none w-[700px] h-[700px] rounded-full bg-yellow-500/[0.025] blur-[140px] -top-60 -left-60" />
       <div className="fixed pointer-events-none w-[700px] h-[700px] rounded-full bg-yellow-500/[0.025] blur-[140px] -bottom-60 -right-60" />
 
-      /* navbar */
+      {/* navbar */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0a0a]/90 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -396,7 +396,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
 
       <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 pb-16">
 
-        /* page header */
+        {/* page header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -413,7 +413,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
           </p>
         </motion.div>
 
-        /*  fetch / select error (persistent, retry refetches)  */
+        {/*  fetch / select error (persistent, retry refetches)  */}
         <AnimatePresence>
           {fetchError && (
             <motion.div
@@ -435,7 +435,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
           )}
         </AnimatePresence>
 
-        /* delete error (transient, auto-dismisses) */
+        {/* delete error (transient, auto-dismisses) */}
         <AnimatePresence>
           {deleteError && (
             <motion.div
@@ -457,7 +457,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
           )}
         </AnimatePresence>
 
-        /* aggregate totals */
+        {/* aggregate totals */}
         <AnimatePresence>
           {!loading && live.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
@@ -479,7 +479,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
           )}
         </AnimatePresence>
 
-        /* section label */
+        {/* section label */}
         <div className="flex items-center justify-between mb-5">
           <p className="text-[10px] font-bold tracking-[0.22em] text-gray-600 uppercase">
             Your Accounts
@@ -489,7 +489,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
           )}
         </div>
 
-        /* account grid */
+        {/* account grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {loading ? (
             [0, 1, 2].map((i) => <SkeletonCard key={i} index={i} />)
