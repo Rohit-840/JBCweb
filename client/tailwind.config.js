@@ -9,6 +9,7 @@ export default {
       fontFamily: {
         sans: ["Space Grotesk", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+        bolin: ['"Bolin Gerii"', 'sans-serif'],
       },
     },
   },
