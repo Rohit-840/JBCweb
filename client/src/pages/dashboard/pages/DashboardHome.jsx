@@ -89,7 +89,9 @@ export default function DashboardHome({ data, connected }) {
     if (!hist || hist.length === 0) return null;
     const sorted = [...hist].sort((a, b) => a.time - b.time);
     let cum = 0;
-    return sorted.map((d) => ({ time: d.time * 1000, equity: (cum += d.profit) }));
+    const pts = sorted.map((d) => ({ time: d.time * 1000, equity: (cum += d.profit) }));
+    // Anchor at $0 just before the first trade so the line always starts from zero
+    return [{ time: sorted[0].time * 1000 - 1000, equity: 0 }, ...pts];
   }, [volumeFilteredHistory]);
 
   const displayAnalytics = useMemo(() => {
@@ -151,6 +153,22 @@ export default function DashboardHome({ data, connected }) {
     } catch { /* silent */ }
   }, []);
 
+  const handleDeleteStrategy = useCallback(async (strategyName) => {
+    try {
+      const token = localStorage.getItem("token");
+      await api.delete(
+        `/strategies/${strategyName}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCustomizations((prev) => {
+        const next = { ...prev };
+        delete next[strategyName];
+        return next;
+      });
+      if (activeStrategy === strategyName) setActiveStrategy(null);
+    } catch { /* silent */ }
+  }, [activeStrategy]);
+
   return (
     <div className="p-5 min-h-full">
       {/* Header */}
@@ -191,6 +209,7 @@ export default function DashboardHome({ data, connected }) {
         onStrategyChange={setActiveStrategy}
         onAddSymbol={handleAddSymbol}
         onRemoveSymbol={handleRemoveSymbol}
+        onDeleteStrategy={handleDeleteStrategy}
         symbolLoading={symbolLoading}
         availableVolumes={availableStrategyVolumes}
         volumeFilter={strategyVolumeFilter}

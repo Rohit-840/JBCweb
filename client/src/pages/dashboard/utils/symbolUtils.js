@@ -30,22 +30,23 @@ export const isValidSymbol = (sym) => /^[a-z0-9.]{1,20}$/.test(sym);
 export const buildEffectiveStrategies = (customizations = {}) => {
   const result = {};
 
+  // Static strategies merged with user customizations
   for (const [name, staticSymbols] of Object.entries(STRATEGIES)) {
-    const delta   = customizations[name] || { added: [], removed: [] };
-    const removed = new Set(delta.removed.map((s) => s.toLowerCase()));
-
-    // Keep static symbols not explicitly removed
-    const base = staticSymbols.filter(
-      (s) => !removed.has(s.toLowerCase())
-    );
-
-    // Add custom symbols that don't duplicate base (case-insensitive check)
+    const delta        = customizations[name] || { added: [], removed: [] };
+    const removed      = new Set(delta.removed.map((s) => s.toLowerCase()));
+    const base         = staticSymbols.filter((s) => !removed.has(s.toLowerCase()));
     const baseUpperSet = new Set(base.map((s) => s.toUpperCase()));
-    const extra = (delta.added || []).filter(
-      (s) => !baseUpperSet.has(s.toUpperCase())
-    );
+    const extra        = (delta.added || []).filter((s) => !baseUpperSet.has(s.toUpperCase()));
+    result[name]       = [...base, ...extra];
+  }
 
-    result[name] = [...base, ...extra];
+  // Custom-only strategies (not in static STRATEGIES)
+  for (const [name, delta] of Object.entries(customizations)) {
+    if (name in result) continue;
+    const syms = (delta.added || []).filter(
+      (s) => !(delta.removed || []).includes(s)
+    );
+    if (syms.length > 0) result[name] = syms;
   }
 
   return result;

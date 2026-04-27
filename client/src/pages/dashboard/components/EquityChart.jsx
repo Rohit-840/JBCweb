@@ -1,24 +1,63 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const PERIODS = [
-  { label: "1D",  days: 1   },
-  { label: "1W",  days: 7   },
-  { label: "1M",  days: 30  },
-  { label: "1Y",  days: 365 },
-];
-
+const PERIODS     = ["1D", "1W", "1M", "1Y"];
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAY_SHORT   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-// ── Build cumulative-P&L points from closed-trade history ─────────────────────
-function buildPts(history, periodDays) {
-  const cutoff  = (Date.now() / 1000) - periodDays * 86_400;
-  const sorted  = (history || [])
+// ── Period start (epoch seconds) ──────────────────────────────────────────────
+function getPeriodCutoff(label) {
+  const n = new Date();
+  switch (label) {
+    case "1D":
+      return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 0, 0, 0, 0).getTime() / 1000;
+    case "1W": {
+      const d = n.getDay();                          // 0=Sun … 6=Sat
+      const back = d === 0 ? -6 : 1 - d;            // shift to Monday
+      return new Date(n.getFullYear(), n.getMonth(), n.getDate() + back, 0, 0, 0, 0).getTime() / 1000;
+    }
+    case "1M":
+      return new Date(n.getFullYear(), n.getMonth(), 1, 0, 0, 0, 0).getTime() / 1000;
+    case "1Y":
+      return new Date(n.getFullYear(), 0, 1, 0, 0, 0, 0).getTime() / 1000;
+    default:
+      return 0;
+  }
+}
+
+// ── Period end (epoch ms) — right edge of X-axis ──────────────────────────────
+function getPeriodEnd(label) {
+  const n = new Date();
+  switch (label) {
+    case "1D":
+      // Midnight tonight (start of tomorrow)
+      return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0).getTime();
+    case "1W": {
+      // Next Monday midnight (end of Sunday)
+      const d    = n.getDay();
+      const fwd  = d === 0 ? 1 : 8 - d;
+      return new Date(n.getFullYear(), n.getMonth(), n.getDate() + fwd, 0, 0, 0, 0).getTime();
+    }
+    case "1M":
+      // First day of next month
+      return new Date(n.getFullYear(), n.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
+    case "1Y":
+      // Jan 1 of next year
+      return new Date(n.getFullYear() + 1, 0, 1, 0, 0, 0, 0).getTime();
+    default:
+      return Date.now();
+  }
+}
+
+// ── Build cumulative-P&L points ───────────────────────────────────────────────
+function buildPts(history, periodLabel) {
+  const cutoff = getPeriodCutoff(periodLabel);
+  const sorted = (history || [])
     .filter((h) => h.time >= cutoff)
     .sort((a, b) => a.time - b.time);
   let cum = 0;
-  return sorted.map((h) => ({ time: h.time * 1000, equity: (cum += h.profit) }));
+  const pts = sorted.map((h) => ({ time: h.time * 1000, equity: (cum += h.profit) }));
+  return [{ time: cutoff * 1000, equity: 0 }, ...pts];
 }
 
 // ── Smooth cubic-bezier SVG line ──────────────────────────────────────────────
@@ -31,63 +70,56 @@ function smoothPath(svgPts) {
   }, "");
 }
 
-// ── Time-based X-axis tick generator ─────────────────────────────────────────
-// Generates ticks at natural calendar boundaries (hours / days / weeks / months)
-// regardless of data density, so labels are always evenly spaced by time.
+// ── X-axis tick generator ─────────────────────────────────────────────────────
+// Iterates from period START for a fixed count — never skips the first label.
+// inBounds uses the chart pixel range so future ticks (past "now" but within
+// the period end) are correctly shown as the X-axis extends to period end.
 function buildXTicks(minT, maxT, period, toX, padL, chartW) {
-  const ticks = [];
-  const inBounds = (x) => x >= padL - 1 && x <= padL + chartW + 1;
+  const ticks    = [];
+  const inBounds = (t) => { const x = toX(t); return x >= padL - 1 && x <= padL + chartW + 1; };
 
   if (period === "1D") {
-    // Tick every 4 hours — shows the rhythm of a trading day
-    const d = new Date(minT);
-    d.setMinutes(0, 0, 0);
-    d.setHours(Math.ceil(d.getHours() / 4) * 4);
-    let guard = 0;
-    while (d.getTime() <= maxT && guard++ < 20) {
-      const x = toX(d.getTime());
-      if (inBounds(x))
-        ticks.push({ x, label: `${String(d.getHours()).padStart(2, "0")}:00` });
-      d.setHours(d.getHours() + 4);
+    // 00:00, 04:00, 08:00, 12:00, 16:00, 20:00  (6 fixed ticks)
+    const base = new Date(minT);
+    base.setHours(0, 0, 0, 0);
+    for (let h = 0; h <= 20; h += 4) {
+      const d = new Date(base.getTime());
+      d.setHours(h);
+      const t = d.getTime();
+      if (inBounds(t))
+        ticks.push({ x: toX(t), label: `${String(h).padStart(2, "0")}:00` });
     }
 
   } else if (period === "1W") {
-    // Tick at midnight of each day — shows every day of the week
+    // Mon → Sun  (7 ticks, starting from Monday = minT)
     const d = new Date(minT);
     d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + 1);      // start from the next midnight
-    let guard = 0;
-    while (d.getTime() <= maxT + 86_400_000 && guard++ < 10) {
-      const x = toX(d.getTime());
-      if (inBounds(x))
-        ticks.push({ x, label: `${DAY_SHORT[d.getDay()]} ${d.getDate()}` });
+    for (let i = 0; i < 7; i++) {
+      const t = d.getTime();
+      if (inBounds(t))
+        ticks.push({ x: toX(t), label: `${DAY_SHORT[d.getDay()]} ${d.getDate()}` });
       d.setDate(d.getDate() + 1);
     }
 
   } else if (period === "1M") {
-    // Tick every 5 days — ~6 evenly-spaced labels across the month
+    // 1st, 8th, 15th, 22nd, 29th  (5 ticks, weekly from 1st)
     const d = new Date(minT);
     d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + 1);
-    let guard = 0;
-    while (d.getTime() <= maxT + 86_400_000 && guard++ < 12) {
-      const x = toX(d.getTime());
-      if (inBounds(x))
-        ticks.push({ x, label: `${MONTH_SHORT[d.getMonth()]} ${String(d.getDate()).padStart(2, "0")}` });
-      d.setDate(d.getDate() + 5);
+    for (let i = 0; i < 5; i++) {
+      const t = d.getTime();
+      if (inBounds(t))
+        ticks.push({ x: toX(t), label: `${MONTH_SHORT[d.getMonth()]} ${String(d.getDate()).padStart(2, "0")}` });
+      d.setDate(d.getDate() + 7);
     }
 
   } else if (period === "1Y") {
-    // Tick on the 1st of every month — shows all 12 months clearly
+    // Jan → Dec  (12 ticks, 1st of each month)
     const d = new Date(minT);
-    d.setDate(1);
     d.setHours(0, 0, 0, 0);
-    d.setMonth(d.getMonth() + 1);    // start from the next month's 1st
-    let guard = 0;
-    while (d.getTime() <= maxT + 31 * 86_400_000 && guard++ < 16) {
-      const x = toX(d.getTime());
-      if (inBounds(x))
-        ticks.push({ x, label: MONTH_SHORT[d.getMonth()] });
+    for (let i = 0; i < 12; i++) {
+      const t = d.getTime();
+      if (inBounds(t))
+        ticks.push({ x: toX(t), label: MONTH_SHORT[d.getMonth()] });
       d.setMonth(d.getMonth() + 1);
     }
   }
@@ -95,12 +127,12 @@ function buildXTicks(minT, maxT, period, toX, padL, chartW) {
   return ticks;
 }
 
-// Auto-detect X-axis period from the time range (used for strategy mode)
+// Auto-detect period from data range (strategy mode only)
 function detectPeriod(minT, maxT) {
   const days = (maxT - minT) / 86_400_000;
-  if (days <= 2)   return "1D";
-  if (days <= 14)  return "1W";
-  if (days <= 60)  return "1M";
+  if (days <= 2)  return "1D";
+  if (days <= 14) return "1W";
+  if (days <= 60) return "1M";
   return "1Y";
 }
 
@@ -108,7 +140,7 @@ function detectPeriod(minT, maxT) {
 function PeriodSelector({ period, onChange }) {
   return (
     <div className="flex items-center bg-[#0a0a0a] border border-white/[0.07] rounded-lg p-[3px] gap-[2px]">
-      {PERIODS.map(({ label }) => {
+      {PERIODS.map((label) => {
         const active = period === label;
         return (
           <button
@@ -145,20 +177,18 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
 
   const isStrategy = !!strategyData && strategyData.length >= 2;
 
-  // Build P&L curve from closed trades, then append a live endpoint that
-  // moves every second as account.profit changes (open-position floating P&L).
   const equityPts = useMemo(() => {
     if (isStrategy) return strategyData;
 
-    const days = PERIODS.find((p) => p.label === period)?.days ?? 30;
-    const base = buildPts(fullHistory, days);
+    const base = buildPts(fullHistory, period);
 
-    // Live endpoint — re-computed every second via account.profit dependency
-    const floatingPnl = account?.profit;
+    const floatingPnl   = account?.profit;
     if (floatingPnl == null) return base;
-    const lastCum = base.length > 0 ? base[base.length - 1].equity : 0;
-    return [...base, { time: Date.now(), equity: lastCum + floatingPnl }];
-  }, [isStrategy, strategyData, fullHistory, period, account?.profit]); // eslint-disable-line react-hooks/exhaustive-deps
+    const lastCum        = base.length > 0 ? base[base.length - 1].equity : 0;
+    const lastKnownTime  = base.length > 0 ? base[base.length - 1].time   : 0;
+    const liveTime       = Math.max(Date.now(), lastKnownTime + 1000);
+    return [...base, { time: liveTime, equity: lastCum + floatingPnl }];
+  }, [isStrategy, strategyData, fullHistory, period, account?.profit]); // eslint-disable-line
 
   const pts     = equityPts;
   const hasData = pts.length >= 2;
@@ -172,7 +202,16 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
   const chartW = Math.max(width - padL - padR, 10);
   const chartH = height - padT - padB;
 
-  // ── Scale ─────────────────────────────────────────────────────────────────
+  // ── Time range ────────────────────────────────────────────────────────────
+  // X-axis spans the FULL period (start → end) so ticks are always visible
+  // even early in the period. The curve only fills up to "now".
+  const dataMin  = hasData ? Math.min(...pts.map((p) => p.time)) : 0;
+  const dataMax  = hasData ? Math.max(...pts.map((p) => p.time)) : 1;
+  const minT     = isStrategy ? dataMin : getPeriodCutoff(period) * 1000;
+  const maxT     = isStrategy ? dataMax : Math.max(dataMax, getPeriodEnd(period));
+  const tSpan    = maxT - minT || 1;
+
+  // ── Y scale ───────────────────────────────────────────────────────────────
   const values  = hasData ? pts.map((p) => p.equity) : [0, 1];
   const rawMinV = Math.min(0, ...values);
   const rawMaxV = Math.max(...values);
@@ -180,10 +219,6 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
   const minV    = rawMinV - vPad;
   const maxV    = rawMaxV + vPad;
   const range   = maxV - minV || 1;
-  const times   = hasData ? pts.map((p) => p.time) : [0, 1];
-  const minT    = Math.min(...times);
-  const maxT    = Math.max(...times);
-  const tSpan   = maxT - minT || 1;
 
   const toX   = (t) => padL + ((t - minT) / tSpan) * chartW;
   const toY   = (v) => padT + (1 - (v - minV) / range) * chartH;
@@ -198,7 +233,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
     areaD  = `${pathD} L ${l.x.toFixed(1)} ${zeroY.toFixed(1)} L ${f.x.toFixed(1)} ${zeroY.toFixed(1)} Z`;
   }
 
-  // ── Y-axis labels (5 evenly-spaced ticks on the left) ────────────────────
+  // ── Y-axis labels ─────────────────────────────────────────────────────────
   const yTicks = Array.from({ length: 5 }, (_, i) => {
     const frac = i / 4;
     const v    = minV + frac * range;
@@ -208,9 +243,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
     return { y: padT + (1 - frac) * chartH, val: fmt };
   });
 
-  // ── X-axis: time-based ticks per period ───────────────────────────────────
-  // Strategy mode: auto-detect the best period from the data's time range.
-  // Equity mode: use the user-selected period.
+  // ── X-axis ticks ──────────────────────────────────────────────────────────
   const effectivePeriod = isStrategy ? detectPeriod(minT, maxT) : period;
   const xTicks = hasData
     ? buildXTicks(minT, maxT, effectivePeriod, toX, padL, chartW)
@@ -272,7 +305,6 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
               <stop offset="60%"  stopColor={gradColor} stopOpacity="0.06" />
               <stop offset="100%" stopColor={gradColor} stopOpacity="0"    />
             </linearGradient>
-            {/* Neon glow for the line */}
             <filter id="ecGlow" x="-20%" y="-60%" width="140%" height="220%">
               <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur" />
               <feMerge>
@@ -280,7 +312,6 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            {/* Scan-line texture */}
             <pattern id="ecScan" width="1" height="3" patternUnits="userSpaceOnUse">
               <rect width="1" height="1" fill="rgba(255,255,255,0.012)" />
             </pattern>
@@ -338,7 +369,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
               <path d={pathD} fill="none"
                 stroke={lineColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 
-              {/* Live endpoint dot */}
+              {/* "Now" marker — where the curve ends relative to full period */}
               {svgPts.length > 0 && (() => {
                 const last = svgPts[svgPts.length - 1];
                 return (
@@ -349,7 +380,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
                 );
               })()}
 
-              {/* X-axis labels (time-based, proper granularity per period) */}
+              {/* X-axis labels */}
               {xTicks.map((t, i) => (
                 <text key={i} x={t.x} y={height - 6}
                   fill="#555" fontSize="9" textAnchor="middle" fontFamily="monospace">
@@ -361,7 +392,9 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
             <text x={padL + chartW / 2} y={padT + chartH / 2}
               fill="#2a2a2a" fontSize="12" textAnchor="middle" dominantBaseline="middle"
               fontFamily="monospace">
-              {isStrategy ? "No strategy trade data" : `No closed trades in last ${period}`}
+              {isStrategy
+                ? "No strategy trade data"
+                : `No trades ${period === "1D" ? "today" : period === "1W" ? "this week" : period === "1M" ? "this month" : "this year"}`}
             </text>
           )}
         </svg>
