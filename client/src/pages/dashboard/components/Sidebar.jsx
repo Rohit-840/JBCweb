@@ -79,7 +79,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
             ×
           </button>
         </div>
-        <p className="mt-3 text-[11px] font-bold tracking-[0.18em] text-yellow-400/90">CROWNSTONE</p>
+        <p className="mt-3 text-[11px] font-bold tracking-[0.18em] text-yellow-400/90" style={{ fontFamily: 'bolin gerii' }}>CROWNSTONE</p>
         <p className="text-[9px] tracking-[0.22em] text-gray-500 uppercase">Private Wealth</p>
       </div>
 

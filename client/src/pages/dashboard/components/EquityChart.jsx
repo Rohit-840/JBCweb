@@ -18,14 +18,20 @@ function buildPts(history, periodDays) {
     .filter((h) => h.time >= cutoff)
     .sort((a, b) => a.time - b.time);
   let cum = 0;
-  return sorted.map((h) => ({ time: h.time * 1000, equity: (cum += h.profit) }));
+  const pts = sorted.map((h) => ({ time: h.time * 1000, equity: (cum += h.profit) }));
+  // Always anchor at $0 at the start of the period so the line never appears
+  // to "float" — it visually starts from zero at the left edge of the chart.
+  return [{ time: cutoff * 1000, equity: 0 }, ...pts];
 }
 
 // ── Smooth cubic-bezier SVG line ──────────────────────────────────────────────
+// Falls back to a linear segment whenever X would not advance — guarantees the
+// line never travels backwards in time regardless of data or clock-skew issues.
 function smoothPath(svgPts) {
   return svgPts.reduce((acc, p, i) => {
     if (i === 0) return `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
     const prev = svgPts[i - 1];
+    if (p.x <= prev.x) return `${acc} L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
     const cpx  = ((prev.x + p.x) / 2).toFixed(1);
     return `${acc} C ${cpx} ${prev.y.toFixed(1)} ${cpx} ${p.y.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
   }, "");
@@ -156,8 +162,13 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
     // Live endpoint — re-computed every second via account.profit dependency
     const floatingPnl = account?.profit;
     if (floatingPnl == null) return base;
-    const lastCum = base.length > 0 ? base[base.length - 1].equity : 0;
-    return [...base, { time: Date.now(), equity: lastCum + floatingPnl }];
+    const lastCum       = base.length > 0 ? base[base.length - 1].equity : 0;
+    const lastKnownTime = base.length > 0 ? base[base.length - 1].time   : 0;
+    // MT5 server clock is often ahead of local system clock.  Guarantee the
+    // live endpoint is always AFTER the last historical point so the line
+    // never curves backwards in time.
+    const liveTime = Math.max(Date.now(), lastKnownTime + 1000);
+    return [...base, { time: liveTime, equity: lastCum + floatingPnl }];
   }, [isStrategy, strategyData, fullHistory, period, account?.profit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pts     = equityPts;

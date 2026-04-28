@@ -15,6 +15,7 @@ function smoothPath(pts) {
   return pts.reduce((acc, p, i) => {
     if (i === 0) return `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
     const prev = pts[i - 1];
+    if (p.x <= prev.x) return `${acc} L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
     const cpx  = ((prev.x + p.x) / 2).toFixed(1);
     return `${acc} C ${cpx} ${prev.y.toFixed(1)} ${cpx} ${p.y.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
   }, "");
@@ -50,9 +51,9 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
   const hasHist = histPts.length >= 2;
 
   // ── Open positions stepped projection ─────────────────────────────────────
-  const now           = Math.floor(Date.now() / 1000);
+  const localNow      = Math.floor(Date.now() / 1000);
   const lastHistValue = histPts.length > 0 ? histPts[histPts.length - 1].value : 0;
-  const lastHistTime  = histPts.length > 0 ? histPts[histPts.length - 1].time  : now - 3600;
+  const lastHistTime  = histPts.length > 0 ? histPts[histPts.length - 1].time  : localNow - 3600;
   const totalOpenPnl  = trades.reduce((s, t) => s + (t.profit || 0), 0);
   const hasOpen       = trades.length > 0;
 
@@ -68,7 +69,11 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
       cum += t.profit || 0;
       openPts.push({ time: tTime, value: cum });
     }
-    if (openPts[openPts.length - 1].time < now)
+    // MT5 server clock may be ahead of local clock — use whichever is later
+    // so the dashed projection line always extends to the right, never left.
+    const lastOpenTime = openPts[openPts.length - 1].time;
+    const now = Math.max(localNow, lastOpenTime + 1);
+    if (lastOpenTime < now)
       openPts.push({ time: now, value: cum });
   }
 
