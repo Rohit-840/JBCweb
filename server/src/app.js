@@ -16,11 +16,13 @@ app.use(cors({
       origin.includes("127.0.0.1") ||
       /^https?:\/\/192\.168\.\d+\.\d+/.test(origin) ||
       /^https?:\/\/10\.\d+\.\d+\.\d+/.test(origin) ||
-      /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/.test(origin)
-      
+      /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/.test(origin) ||
+      /^https?:\/\/\d+\.\d+\.\d+\.\d+/.test(origin)
     ) {
       return callback(null, true);
     }
+    console.warn("CORS blocked origin:", origin);
+
     callback(new Error("Not allowed by CORS"));
   },
   credentials: true
@@ -66,6 +68,12 @@ export default app;
 //     ) {
 //       return callback(null, true);
 //     }
+//       /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/.test(origin) ||
+//       /^https?:\/\/\d+\.\d+\.\d+\.\d+/.test(origin)
+//     ) {
+//       return callback(null, true);
+//     }
+//     console.warn("CORS blocked origin:", origin);
 
 //     callback(new Error("Not allowed by CORS"));
 //   },
