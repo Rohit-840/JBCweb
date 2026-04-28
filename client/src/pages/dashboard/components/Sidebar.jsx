@@ -70,7 +70,15 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
       /* logo */
       <div className="flex flex-col font-bolin items-center pb-2 px-4" style={{ fontFamily: 'bolin gerii' }}>
         <div className="relative w-full flex items-center justify-center">
-          <img src={logo} alt="JB Crownstone" className="w-25 h-25 p-6 rounded-xl object-cover" />
+          <img
+            src={logo}
+            alt="JB Crownstone"
+            className="w-25 h-25 p-6 rounded-xl object-cover"
+            style={{
+              filter:
+                'drop-shadow(0 0 6px rgba(212,175,55,0.85)) drop-shadow(0 0 14px rgba(212,175,55,0.5)) drop-shadow(0 0 28px rgba(212,175,55,0.25))',
+            }}
+          />
           <button
             onClick={onClose}
             className="lg:hidden absolute right-0 top-0 w-7 h-7 flex items-center justify-center
@@ -79,7 +87,10 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
             ×
           </button>
         </div>
-        <p className="mt-3 text-[18px] font-bold tracking-[0.18em] text-yellow-400/90">CROWNSTONE</p>
+        <p
+          className="mt-3 text-[18px] font-bold tracking-[0.18em] text-yellow-400/90"
+          style={{ textShadow: '0 0 6px rgba(212,175,55,0.4), 0 0 14px rgba(212,175,55,0.2)' }}
+        >CROWNSTONE</p>
         <p className="text-[12px] tracking-[0.22em] text-gray-500 uppercase">Private Wealth</p>
       </div>
 
