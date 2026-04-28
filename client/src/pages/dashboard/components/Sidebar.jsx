@@ -1,4 +1,4 @@
-import logo from "../../../assets/new3.webp";
+import logo from "../../../assets/ldb.png";
 
 const NAV = [
   {
@@ -68,9 +68,9 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
       `}
     >
       /* logo */
-      <div className="flex flex-col items-center pt-7 pb-5 px-4">
+      <div className="flex flex-col font-bolin items-center pb-2 px-4" style={{ fontFamily: 'bolin gerii' }}>
         <div className="relative w-full flex items-center justify-center">
-          <img src={logo} alt="JB Crownstone" className="w-16 h-16 rounded-xl object-cover" />
+          <img src={logo} alt="JB Crownstone" className="w-25 h-25 p-6 rounded-xl object-cover" />
           <button
             onClick={onClose}
             className="lg:hidden absolute right-0 top-0 w-7 h-7 flex items-center justify-center
@@ -79,8 +79,8 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
             ×
           </button>
         </div>
-        <p className="mt-3 text-[11px] font-bold tracking-[0.18em] text-yellow-400/90">CROWNSTONE</p>
-        <p className="text-[9px] tracking-[0.22em] text-gray-500 uppercase">Private Wealth</p>
+        <p className="mt-3 text-[18px] font-bold tracking-[0.18em] text-yellow-400/90">CROWNSTONE</p>
+        <p className="text-[12px] tracking-[0.22em] text-gray-500 uppercase">Private Wealth</p>
       </div>
 
       <div className="h-px bg-white/5 mx-4" />
