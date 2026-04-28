@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { STRATEGY_CONFIG, applyTPSLFilter } from "../constants.js";
+import { STRATEGY_CONFIG, STRATEGIES, applyTPSLFilter } from "../constants.js";
+import { normaliseSymbol, isValidSymbol } from "../utils/symbolUtils.js";
 import SymbolChart      from "./SymbolChart.jsx";
 import AddSymbolInput   from "./AddSymbolInput.jsx";
 import InteractiveChart from "./InteractiveChart.jsx";/* helpers */
@@ -115,6 +116,199 @@ function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
   );
 }
 
+/* ── Edit Strategies Modal ───────────────────────────────────────────────── */
+function EditModal({ strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy, symbolLoading, onClose }) {
+  const [addInputs,  setAddInputs]  = useState({});   // { strategyName: string }
+  const [addErrors,  setAddErrors]  = useState({});
+  const [newName,    setNewName]    = useState("");
+  const [newSymbol,  setNewSymbol]  = useState("");
+  const [newError,   setNewError]   = useState("");
+  const [creating,   setCreating]   = useState(false);
+
+  const isStatic = (name) => name in STRATEGIES;
+
+  const handleAddSymbol = async (strategyName) => {
+    const raw = (addInputs[strategyName] || "").trim();
+    const sym = normaliseSymbol(raw);
+    if (!sym) return setAddErrors((p) => ({ ...p, [strategyName]: "Enter a symbol." }));
+    if (!isValidSymbol(sym)) return setAddErrors((p) => ({ ...p, [strategyName]: "Letters, digits, dots only." }));
+    setAddErrors((p) => ({ ...p, [strategyName]: "" }));
+    await onAddSymbol(strategyName, sym);
+    setAddInputs((p) => ({ ...p, [strategyName]: "" }));
+  };
+
+  const handleCreate = async () => {
+    const name = newName.trim().toUpperCase().replace(/\s+/g, "_");
+    const sym  = normaliseSymbol(newSymbol);
+    if (!name)             return setNewError("Enter a strategy name.");
+    if (!sym)              return setNewError("Enter at least one symbol.");
+    if (!isValidSymbol(sym)) return setNewError("Symbol: letters, digits, dots only.");
+    if (name in strategies) return setNewError("Strategy name already exists.");
+    setNewError("");
+    setCreating(true);
+    await onAddSymbol(name, sym);
+    setCreating(false);
+    setNewName("");
+    setNewSymbol("");
+  };
+
+  const handleDelete = async (name) => {
+    if (!window.confirm(`Delete strategy "${name}"? This cannot be undone.`)) return;
+    await onDeleteStrategy(name);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div
+        className="bg-[#0d0d0d] border border-white/10 rounded-2xl shadow-2xl
+          w-full max-w-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "88vh" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
+          <div>
+            <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest mb-0.5">Configuration</p>
+            <h2 className="text-lg font-bold text-white">Manage Strategies</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full
+              bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white
+              transition-colors text-xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Strategy list */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {Object.entries(strategies).map(([name, symbols]) => (
+            <div key={name} className="bg-white/[0.03] rounded-xl border border-white/5 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white">{name}</span>
+                  <span className="text-[10px] text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">
+                    {symbols.length} symbol{symbols.length !== 1 ? "s" : ""}
+                  </span>
+                  {isStatic(name) && (
+                    <span className="text-[9px] text-yellow-400/50 bg-yellow-400/5 border border-yellow-400/10
+                      px-2 py-0.5 rounded-full tracking-widest uppercase">Static</span>
+                  )}
+                </div>
+                {!isStatic(name) && (
+                  <button
+                    onClick={() => handleDelete(name)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-semibold
+                      bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20
+                      transition-all duration-150"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                )}
+              </div>
+
+              {/* Symbol chips */}
+              <div className="flex flex-wrap gap-2 mb-3 min-h-[28px]">
+                {symbols.length === 0 ? (
+                  <span className="text-xs text-gray-700 italic">No symbols — add one below</span>
+                ) : symbols.map((sym) => (
+                  <span
+                    key={sym}
+                    className="group flex items-center gap-1 px-2.5 py-1 rounded-lg
+                      bg-white/5 border border-white/10 text-xs text-gray-300
+                      hover:border-red-500/30 transition-all"
+                  >
+                    {sym}
+                    <button
+                      onClick={() => onRemoveSymbol(name, sym)}
+                      className="text-gray-600 hover:text-red-400 transition-colors leading-none text-sm ml-0.5"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* Add symbol input */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={addInputs[name] || ""}
+                  onChange={(e) => {
+                    setAddInputs((p) => ({ ...p, [name]: e.target.value }));
+                    setAddErrors((p) => ({ ...p, [name]: "" }));
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddSymbol(name)}
+                  disabled={symbolLoading}
+                  placeholder="Add symbol (e.g. gbpjpy)"
+                  className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg
+                    px-3 py-1.5 text-xs text-white placeholder-gray-700
+                    outline-none focus:border-yellow-500/40 focus:bg-white/[0.07]
+                    disabled:opacity-40 transition-colors"
+                />
+                <button
+                  onClick={() => handleAddSymbol(name)}
+                  disabled={symbolLoading || !(addInputs[name] || "").trim()}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold
+                    bg-yellow-500/15 border border-yellow-500/30 text-yellow-400
+                    hover:bg-yellow-500/25 disabled:opacity-30 disabled:cursor-not-allowed
+                    transition-all"
+                >
+                  + Add
+                </button>
+              </div>
+              {addErrors[name] && (
+                <p className="mt-1 text-[10px] text-red-400">{addErrors[name]}</p>
+              )}
+            </div>
+          ))}
+
+          {/* New strategy creator */}
+          <div className="rounded-xl border border-dashed border-white/10 p-4">
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Create New Strategy</p>
+            <div className="flex flex-col sm:flex-row gap-2 mb-2">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => { setNewName(e.target.value); setNewError(""); }}
+                placeholder="Strategy name (e.g. NOVA)"
+                className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg
+                  px-3 py-2 text-xs text-white placeholder-gray-700
+                  outline-none focus:border-yellow-500/40 focus:bg-white/[0.07] transition-colors"
+              />
+              <input
+                type="text"
+                value={newSymbol}
+                onChange={(e) => { setNewSymbol(e.target.value); setNewError(""); }}
+                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                placeholder="First symbol (e.g. eurusd)"
+                className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg
+                  px-3 py-2 text-xs text-white placeholder-gray-700
+                  outline-none focus:border-yellow-500/40 focus:bg-white/[0.07] transition-colors"
+              />
+              <button
+                onClick={handleCreate}
+                disabled={creating || !newName.trim() || !newSymbol.trim()}
+                className="px-4 py-2 rounded-lg text-xs font-bold
+                  bg-yellow-500/15 border border-yellow-500/30 text-yellow-400
+                  hover:bg-yellow-500/25 disabled:opacity-30 disabled:cursor-not-allowed
+                  transition-all whitespace-nowrap"
+              >
+                {creating ? "Creating…" : "Create"}
+              </button>
+            </div>
+            {newError && <p className="text-[10px] text-red-400">{newError}</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* main component */
 export default function StrategyFilter({
   data,
@@ -123,6 +317,7 @@ export default function StrategyFilter({
   onStrategyChange,
   onAddSymbol,
   onRemoveSymbol,
+  onDeleteStrategy,
   symbolLoading = false,
   availableVolumes = [],
   volumeFilter = [],
@@ -131,6 +326,7 @@ export default function StrategyFilter({
   const [popup, setPopup]             = useState(null);
   const [popupVolume, setPopupVolume] = useState("");
   const [interactiveChartOpen, setInteractiveChartOpen] = useState(false);
+  const [editOpen, setEditOpen]       = useState(false);
 
   // ── Popup history + keyboard interaction ──────────────────────────────────
   // Push a browser-history entry when the popup opens so that:
@@ -256,6 +452,20 @@ export default function StrategyFilter({
                 RESET
               </button>
             )}
+
+            {/* Edit button */}
+            <button
+              onClick={() => setEditOpen(true)}
+              title="Manage strategies"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/10
+                text-gray-500 hover:text-yellow-400 hover:border-yellow-500/30 hover:bg-yellow-500/5
+                transition-all duration-200"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -570,6 +780,17 @@ export default function StrategyFilter({
             </div>
           </div>
         </>
+      )}
+
+      {editOpen && (
+        <EditModal
+          strategies={strategies}
+          onAddSymbol={onAddSymbol}
+          onRemoveSymbol={onRemoveSymbol}
+          onDeleteStrategy={onDeleteStrategy}
+          symbolLoading={symbolLoading}
+          onClose={() => setEditOpen(false)}
+        />
       )}
 
       {interactiveChartOpen && (

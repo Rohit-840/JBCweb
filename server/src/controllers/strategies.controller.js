@@ -77,6 +77,21 @@ export const addSymbol = async (req, res) => {
   }
 };
 
+// ── DELETE /api/strategies/:strategy ─────────────────────────────────────────
+export const deleteStrategy = async (req, res) => {
+  try {
+    const { strategy } = req.params;
+    const user = await User.findById(req.user.id);
+    if (!user.strategyCustomizations) user.strategyCustomizations = new Map();
+    user.strategyCustomizations.delete(strategy);
+    user.markModified("strategyCustomizations");
+    await user.save();
+    res.json({ message: "Strategy deleted" });
+  } catch {
+    res.status(500).json({ message: "Failed to delete strategy" });
+  }
+};
+
 // ── DELETE /api/strategies/:strategy/symbol/:symbol ──────────────────────────
 export const removeSymbol = async (req, res) => {
   try {

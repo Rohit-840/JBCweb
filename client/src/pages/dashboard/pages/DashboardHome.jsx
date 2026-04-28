@@ -153,6 +153,22 @@ export default function DashboardHome({ data, connected }) {
     } catch { /* silent */ }
   }, []);
 
+  const handleDeleteStrategy = useCallback(async (strategyName) => {
+    try {
+      const token = localStorage.getItem("token");
+      await api.delete(
+        `/strategies/${strategyName}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCustomizations((prev) => {
+        const next = { ...prev };
+        delete next[strategyName];
+        return next;
+      });
+      if (activeStrategy === strategyName) setActiveStrategy(null);
+    } catch { /* silent */ }
+  }, [activeStrategy]);
+
   return (
     <div className="p-5 min-h-full">
       {/* Header */}
@@ -193,6 +209,7 @@ export default function DashboardHome({ data, connected }) {
         onStrategyChange={setActiveStrategy}
         onAddSymbol={handleAddSymbol}
         onRemoveSymbol={handleRemoveSymbol}
+        onDeleteStrategy={handleDeleteStrategy}
         symbolLoading={symbolLoading}
         availableVolumes={availableStrategyVolumes}
         volumeFilter={strategyVolumeFilter}

@@ -19,6 +19,7 @@
     "react-apexcharts": "^2.1.0",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.1",
+    "snapshot": "^0.0.0",
     "three": "^0.184.0",
     "zustand": "^5.0.12"
   },
