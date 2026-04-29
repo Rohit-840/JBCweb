@@ -18,8 +18,13 @@ export default defineConfig({
       '/ws/dashboard': {
         target: 'ws://localhost:8001',
         ws: true,
-        changeOrigin: true,    // required when connecting from a different IP/laptop
-        rewriteWsOrigin: true, // rewrite the Origin header so the Python server accepts it
+        changeOrigin: true,
+        rewriteWsOrigin: true,
+      },
+      // Direct Python MT5 bridge (trade operations — close, etc.)
+      '/mt5': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
       },
     },
   },

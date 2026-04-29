@@ -1,9 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { STRATEGY_CONFIG, STRATEGIES, applyTPSLFilter } from "../constants.js";
 import { normaliseSymbol, isValidSymbol } from "../utils/symbolUtils.js";
 import SymbolChart      from "./SymbolChart.jsx";
 import AddSymbolInput   from "./AddSymbolInput.jsx";
-import InteractiveChart from "./InteractiveChart.jsx";/* helpers */
+import InteractiveChart from "./InteractiveChart.jsx";
+
+/* helpers */
 function TypeBadge({ type }) {
   const isBuy = type === 0;
   return (
@@ -49,6 +51,135 @@ function StatCard({ label, value, color = "text-white" }) {
     <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5 text-center">
       <p className="text-[9px] tracking-widest text-gray-600 uppercase mb-1.5">{label}</p>
       <p className={`text-base font-bold transition-all duration-300 ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+/* ── Suggestion combo-box input ────────────────────────────────────────────── */
+function SuggestInput({
+  value, onChange, onSelectSubmit, onKeyDown,
+  suggestions, openSymbols, disabled, placeholder, className,
+}) {
+  const [dropOpen, setDropOpen] = useState(false);
+  const [cursor,   setCursor]   = useState(-1);
+  const [dropPos,  setDropPos]  = useState({});
+  const inputRef = useRef(null);
+  const wrapRef  = useRef(null);
+
+  const matches = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return suggestions.slice(0, 8);
+    const starts   = suggestions.filter(s => s.startsWith(q));
+    const contains = suggestions.filter(s => !s.startsWith(q) && s.includes(q));
+    return [...starts, ...contains].slice(0, 8);
+  }, [value, suggestions]);
+
+  const updatePos = () => {
+    if (inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect();
+      setDropPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 200) });
+    }
+  };
+
+  useEffect(() => {
+    if (!dropOpen) return;
+    const close    = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setDropOpen(false); };
+    const onScroll = () => setDropOpen(false);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("scroll",    onScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("scroll",    onScroll, true);
+    };
+  }, [dropOpen]);
+
+  const pick = (sym) => {
+    onChange(sym);
+    setDropOpen(false);
+    setCursor(-1);
+    onSelectSubmit?.(sym);
+  };
+
+  const handleKey = (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault(); setDropOpen(true); updatePos();
+      setCursor(c => Math.min(c + 1, matches.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setCursor(c => Math.max(c - 1, 0));
+    } else if (e.key === "Enter") {
+      if (dropOpen && cursor >= 0 && matches[cursor]) {
+        e.preventDefault(); pick(matches[cursor]);
+      } else {
+        setDropOpen(false); onKeyDown?.(e);
+      }
+    } else if (e.key === "Escape") {
+      setDropOpen(false); setCursor(-1);
+    } else {
+      onKeyDown?.(e);
+    }
+  };
+
+  return (
+    <div className="relative flex-1" ref={wrapRef}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setCursor(-1); setDropOpen(true); updatePos(); }}
+        onFocus={() => { setDropOpen(true); updatePos(); }}
+        onKeyDown={handleKey}
+        disabled={disabled}
+        placeholder={placeholder}
+        className={className}
+      />
+
+      {dropOpen && matches.length > 0 && (
+        <div
+          style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
+          className="bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+        >
+          <div className="px-3 py-1.5 border-b border-white/5 flex items-center gap-1.5 bg-[#1a1a1a]">
+            <svg className="w-2.5 h-2.5 text-yellow-400/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span className="text-[9px] text-yellow-400/50 uppercase tracking-widest font-medium">
+              From your trades
+            </span>
+          </div>
+          <div className="max-h-44 overflow-y-auto">
+            {matches.map((sym, i) => {
+              const isLive = openSymbols?.has(sym);
+              return (
+                <button
+                  key={sym}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pick(sym)}
+                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between
+                    transition-colors duration-100 ${
+                    i === cursor
+                      ? "bg-yellow-500/15 text-yellow-300"
+                      : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      isLive ? "bg-green-400 animate-pulse" : "bg-gray-600"
+                    }`} />
+                    <span className="font-mono">{sym}</span>
+                  </span>
+                  {isLive && (
+                    <span className="text-[8px] bg-green-500/10 border border-green-500/20 text-green-400
+                      px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">
+                      Live
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -117,18 +248,21 @@ function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
 }
 
 /* ── Edit Strategies Modal ───────────────────────────────────────────────── */
-function EditModal({ strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy, symbolLoading, onClose }) {
-  const [addInputs,  setAddInputs]  = useState({});   // { strategyName: string }
-  const [addErrors,  setAddErrors]  = useState({});
-  const [newName,    setNewName]    = useState("");
-  const [newSymbol,  setNewSymbol]  = useState("");
-  const [newError,   setNewError]   = useState("");
-  const [creating,   setCreating]   = useState(false);
+function EditModal({
+  strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy,
+  symbolLoading, suggestions, openSymbols, onClose,
+}) {
+  const [addInputs, setAddInputs] = useState({});
+  const [addErrors, setAddErrors] = useState({});
+  const [newName,   setNewName]   = useState("");
+  const [newSymbol, setNewSymbol] = useState("");
+  const [newError,  setNewError]  = useState("");
+  const [creating,  setCreating]  = useState(false);
 
   const isStatic = (name) => name in STRATEGIES;
 
-  const handleAddSymbol = async (strategyName) => {
-    const raw = (addInputs[strategyName] || "").trim();
+  const handleAddSymbol = async (strategyName, symOverride) => {
+    const raw = symOverride || (addInputs[strategyName] || "").trim();
     const sym = normaliseSymbol(raw);
     if (!sym) return setAddErrors((p) => ({ ...p, [strategyName]: "Enter a symbol." }));
     if (!isValidSymbol(sym)) return setAddErrors((p) => ({ ...p, [strategyName]: "Letters, digits, dots only." }));
@@ -140,10 +274,10 @@ function EditModal({ strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy, 
   const handleCreate = async () => {
     const name = newName.trim().toUpperCase().replace(/\s+/g, "_");
     const sym  = normaliseSymbol(newSymbol);
-    if (!name)             return setNewError("Enter a strategy name.");
-    if (!sym)              return setNewError("Enter at least one symbol.");
+    if (!name)              return setNewError("Enter a strategy name.");
+    if (!sym)               return setNewError("Enter at least one symbol.");
     if (!isValidSymbol(sym)) return setNewError("Symbol: letters, digits, dots only.");
-    if (name in strategies) return setNewError("Strategy name already exists.");
+    if (name in strategies)  return setNewError("Strategy name already exists.");
     setNewError("");
     setCreating(true);
     await onAddSymbol(name, sym);
@@ -156,6 +290,9 @@ function EditModal({ strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy, 
     if (!window.confirm(`Delete strategy "${name}"? This cannot be undone.`)) return;
     await onDeleteStrategy(name);
   };
+
+  const inputCls = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-700 outline-none focus:border-yellow-500/40 focus:bg-white/[0.07] disabled:opacity-40 transition-colors";
+  const inputClsLg = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-700 outline-none focus:border-yellow-500/40 focus:bg-white/[0.07] transition-colors";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -233,27 +370,26 @@ function EditModal({ strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy, 
                 ))}
               </div>
 
-              {/* Add symbol input */}
+              {/* Add symbol input with suggestions */}
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
+                <SuggestInput
                   value={addInputs[name] || ""}
-                  onChange={(e) => {
-                    setAddInputs((p) => ({ ...p, [name]: e.target.value }));
+                  onChange={(v) => {
+                    setAddInputs((p) => ({ ...p, [name]: v }));
                     setAddErrors((p) => ({ ...p, [name]: "" }));
                   }}
+                  onSelectSubmit={(sym) => handleAddSymbol(name, sym)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddSymbol(name)}
+                  suggestions={suggestions}
+                  openSymbols={openSymbols}
                   disabled={symbolLoading}
                   placeholder="Add symbol (e.g. gbpjpy)"
-                  className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg
-                    px-3 py-1.5 text-xs text-white placeholder-gray-700
-                    outline-none focus:border-yellow-500/40 focus:bg-white/[0.07]
-                    disabled:opacity-40 transition-colors"
+                  className={inputCls}
                 />
                 <button
                   onClick={() => handleAddSymbol(name)}
                   disabled={symbolLoading || !(addInputs[name] || "").trim()}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0
                     bg-yellow-500/15 border border-yellow-500/30 text-yellow-400
                     hover:bg-yellow-500/25 disabled:opacity-30 disabled:cursor-not-allowed
                     transition-all"
@@ -276,24 +412,22 @@ function EditModal({ strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy, 
                 value={newName}
                 onChange={(e) => { setNewName(e.target.value); setNewError(""); }}
                 placeholder="Strategy name (e.g. NOVA)"
-                className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg
-                  px-3 py-2 text-xs text-white placeholder-gray-700
-                  outline-none focus:border-yellow-500/40 focus:bg-white/[0.07] transition-colors"
+                className={inputClsLg + " flex-1"}
               />
-              <input
-                type="text"
+              {/* Symbol input with suggestions (fill-only, no auto-submit) */}
+              <SuggestInput
                 value={newSymbol}
-                onChange={(e) => { setNewSymbol(e.target.value); setNewError(""); }}
+                onChange={(v) => { setNewSymbol(v); setNewError(""); }}
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                suggestions={suggestions}
+                openSymbols={openSymbols}
                 placeholder="First symbol (e.g. eurusd)"
-                className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg
-                  px-3 py-2 text-xs text-white placeholder-gray-700
-                  outline-none focus:border-yellow-500/40 focus:bg-white/[0.07] transition-colors"
+                className={inputClsLg + " w-full"}
               />
               <button
                 onClick={handleCreate}
                 disabled={creating || !newName.trim() || !newSymbol.trim()}
-                className="px-4 py-2 rounded-lg text-xs font-bold
+                className="px-4 py-2 rounded-lg text-xs font-bold shrink-0
                   bg-yellow-500/15 border border-yellow-500/30 text-yellow-400
                   hover:bg-yellow-500/25 disabled:opacity-30 disabled:cursor-not-allowed
                   transition-all whitespace-nowrap"
@@ -309,7 +443,7 @@ function EditModal({ strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy, 
   );
 }
 
-/* main component */
+/* ── Main component ──────────────────────────────────────────────────────── */
 export default function StrategyFilter({
   data,
   strategies = {},
@@ -328,11 +462,42 @@ export default function StrategyFilter({
   const [interactiveChartOpen, setInteractiveChartOpen] = useState(false);
   const [editOpen, setEditOpen]       = useState(false);
 
+  // ── Suggestion data ───────────────────────────────────────────────────────
+  // All symbols already assigned to any strategy
+  const allUsedSymbolsSet = useMemo(() => {
+    const set = new Set();
+    for (const syms of Object.values(strategies))
+      for (const s of syms) set.add(s.toLowerCase());
+    return set;
+  }, [strategies]);
+
+  // Open-trade symbols (for the "Live" badge)
+  const openTradeSymbolsSet = useMemo(() => {
+    const set = new Set();
+    for (const t of data?.trades || []) {
+      const s = t.symbol?.trim().toLowerCase();
+      if (s) set.add(s);
+    }
+    return set;
+  }, [data?.trades]);
+
+  // Candidate symbols: from open trades first (sorted), then history-only (sorted)
+  // Excludes anything already in any strategy
+  const candidateSymbols = useMemo(() => {
+    const openSet = new Set();
+    const histSet = new Set();
+    for (const t of data?.trades || []) {
+      const s = t.symbol?.trim().toLowerCase();
+      if (s && !allUsedSymbolsSet.has(s)) openSet.add(s);
+    }
+    for (const h of data?.full_history || []) {
+      const s = h.symbol?.trim().toLowerCase();
+      if (s && !allUsedSymbolsSet.has(s) && !openSet.has(s)) histSet.add(s);
+    }
+    return [...[...openSet].sort(), ...[...histSet].sort()];
+  }, [data?.trades, data?.full_history, allUsedSymbolsSet]);
+
   // ── Popup history + keyboard interaction ──────────────────────────────────
-  // Push a browser-history entry when the popup opens so that:
-  //   • pressing Back closes the popup (not the whole page)
-  //   • pressing Escape closes the popup
-  //   • clicking outside (backdrop) or the × button also pops the entry
   useEffect(() => {
     if (popup) window.history.pushState({ crownstone: "popup", symbol: popup }, "");
   }, [popup]);
@@ -345,25 +510,22 @@ export default function StrategyFilter({
 
   useEffect(() => {
     if (!popup) return;
-    const onKey = (e) => { 
+    const onKey = (e) => {
       if (e.key === "Escape") {
         if (interactiveChartOpen) setInteractiveChartOpen(false);
-        else closePopup(); 
+        else closePopup();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [popup, interactiveChartOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close via UI (×, backdrop, strategy change) — also pops the history entry
-  // so the back button isn't "used up" by an already-dismissed popup.
   const closePopup = () => {
     if (!popup) return;
     setPopup(null);
-    window.history.back(); // pops the entry we pushed on open
+    window.history.back();
   };
 
-  // Reset popup volume filter when symbol changes
   useEffect(() => { setPopupVolume(""); }, [popup]);
 
   const toggleStrategyVolume = (vol) => {
@@ -383,7 +545,6 @@ export default function StrategyFilter({
     closePopup();
   };
 
-  /* all history for the selected symbol, filtered by TP/SL if strategy defines them */
   const symbolHistory = useMemo(() => {
     if (!popup) return [];
     const upper = popup.toUpperCase();
@@ -402,7 +563,6 @@ export default function StrategyFilter({
     [popup, data?.trades]
   );
 
-  /* volume-filtered history — drives table, chart AND stats */
   const displayHistory = useMemo(() => {
     const raw = popupVolume.trim();
     if (!raw) return symbolHistory;
@@ -411,8 +571,8 @@ export default function StrategyFilter({
     return symbolHistory.filter((h) => Math.abs(h.volume - vol) < 0.0001);
   }, [symbolHistory, popupVolume]);
 
-  const isFiltered  = displayHistory.length !== symbolHistory.length;
-  const stats       = useMemo(() => calcStats(displayHistory), [displayHistory]);
+  const isFiltered = displayHistory.length !== symbolHistory.length;
+  const stats      = useMemo(() => calcStats(displayHistory), [displayHistory]);
 
   return (
     <>
@@ -453,7 +613,6 @@ export default function StrategyFilter({
               </button>
             )}
 
-            {/* Edit button */}
             <button
               onClick={() => setEditOpen(true)}
               title="Manage strategies"
@@ -471,7 +630,7 @@ export default function StrategyFilter({
 
         {activeStrategy && (
           <div className="mt-3 pt-3 border-t border-white/5 space-y-2.5">
-            {/* Symbol chips — each has a × to remove */}
+            {/* Symbol chips */}
             <div className="flex gap-2 flex-wrap">
               {(strategies[activeStrategy] || []).map((sym) => {
                 const cfg = STRATEGY_CONFIG[activeStrategy]?.[sym];
@@ -482,7 +641,6 @@ export default function StrategyFilter({
                       bg-white/5 border border-white/10 text-xs text-gray-300
                       hover:border-yellow-500/30 hover:text-yellow-400 transition-all"
                   >
-                    {/* Clicking the label opens the symbol detail popup */}
                     <button
                       onClick={() => setPopup(sym)}
                       className="flex items-center gap-1.5"
@@ -499,8 +657,6 @@ export default function StrategyFilter({
                         </span>
                       )}
                     </button>
-
-                    {/* × remove button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); onRemoveSymbol?.(activeStrategy, sym); }}
                       title={`Remove ${sym} from ${activeStrategy}`}
@@ -514,11 +670,13 @@ export default function StrategyFilter({
               })}
             </div>
 
-            {/* Add symbol inline input */}
+            {/* Add symbol inline input with suggestions */}
             <AddSymbolInput
               strategyName={activeStrategy}
               loading={symbolLoading}
               onAdd={(sym) => onAddSymbol?.(activeStrategy, sym)}
+              suggestions={candidateSymbols}
+              openSymbols={openTradeSymbolsSet}
             />
 
             {availableVolumes.length > 0 && (
@@ -586,7 +744,6 @@ export default function StrategyFilter({
                     </p>
                     <h2 className="text-2xl font-bold text-white">{popup}</h2>
                   </div>
-                  {/* T/P and S/L badges */}
                   {STRATEGY_CONFIG[activeStrategy]?.[popup] && (
                     <div className="flex items-center gap-2">
                       <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
@@ -695,7 +852,6 @@ export default function StrategyFilter({
 
                 <div className="w-full md:w-[380px] md:shrink-0 flex flex-col md:overflow-y-auto">
 
-                  {/* Volume filter */}
                   <VolumeFilter
                     symbolHistory={symbolHistory}
                     volumeFilter={popupVolume}
@@ -789,6 +945,8 @@ export default function StrategyFilter({
           onRemoveSymbol={onRemoveSymbol}
           onDeleteStrategy={onDeleteStrategy}
           symbolLoading={symbolLoading}
+          suggestions={candidateSymbols}
+          openSymbols={openTradeSymbolsSet}
           onClose={() => setEditOpen(false)}
         />
       )}

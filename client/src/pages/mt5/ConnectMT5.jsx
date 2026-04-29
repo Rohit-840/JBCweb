@@ -4,22 +4,31 @@ import api from "../../services/api";
 import logo from "../../assets/logo.jpeg";
 
 const BROKER_SERVERS = [
-  "Pepperstone Financial Markets Limited",
-  "Pepperstone Financial Services L.L.C",
-  "Pepperstone Group Limited",
-  "Pepperstone Limited",
-  "Pepperstone-Demo",
+  // ── Pepperstone demo ────────────────────────────────────────
+  { label: "Pepperstone-Demo",              value: "Pepperstone-Demo" },
+  { label: "PepperstoneCroupier-Demo",      value: "PepperstoneCroupier-Demo" },
+  { label: "PepperstoneCroupier-Demo 2",    value: "PepperstoneCroupier-Demo 2" },
+  // ── Pepperstone live ────────────────────────────────────────
+  { label: "Pepperstone Financial Markets Limited", value: "Pepperstone Financial Markets Limited" },
+  { label: "Pepperstone Financial Services L.L.C",  value: "Pepperstone Financial Services L.L.C" },
+  { label: "Pepperstone Group Limited",             value: "Pepperstone Group Limited" },
+  { label: "Pepperstone Limited",                   value: "Pepperstone Limited" },
+  { label: "PepperstoneCroupier-Live",              value: "PepperstoneCroupier-Live" },
 ];
+const CUSTOM_VALUE = "__custom__";
 
 export default function ConnectMT5({ onSuccess, onBack = null }) {
-  const [login,    setLogin]    = useState("");
-  const [password, setPassword] = useState("");
-  const [server,   setServer]   = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const [msg,      setMsg]      = useState({ text: "", type: "info" });
+  const [login,        setLogin]        = useState("");
+  const [password,     setPassword]     = useState("");
+  const [server,       setServer]       = useState("");
+  const [customServer, setCustomServer] = useState("");
+  const [loading,      setLoading]      = useState(false);
+  const [msg,          setMsg]          = useState({ text: "", type: "info" });
+  const [showHints,    setShowHints]    = useState(false);
+
+  const effectiveServer = server === CUSTOM_VALUE ? customServer.trim() : server;
 
   const connectAccount = async () => {
-    // ── Input validation ────────────────────────────────────────────────────
     if (!login.trim()) {
       setMsg({ text: "Please enter your MT5 Login ID.", type: "error" });
       return;
@@ -28,42 +37,57 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
       setMsg({ text: "Please enter your MT5 Password.", type: "error" });
       return;
     }
-    if (!server) {
-      setMsg({ text: "Please select a broker server.", type: "error" });
+    if (!effectiveServer) {
+      setMsg({ text: "Please select or enter a broker server.", type: "error" });
       return;
     }
 
     setLoading(true);
     setMsg({ text: "", type: "info" });
+    setShowHints(false);
 
     try {
       const token = localStorage.getItem("token");
       const res = await api.post(
         "/mt5/add",
-        { login, password, server },
+        { login: login.trim(), password: password.trim(), server: effectiveServer },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (res.data.alreadyConnected) {
-        // Account exists — treat it as success, user can still proceed
         setMsg({ text: "Account already connected. Redirecting…", type: "success" });
       } else {
         setMsg({ text: "MT5 Connected Successfully!", type: "success" });
       }
-
-      // Keep loading=true so the button stays disabled during the delay
       setTimeout(() => onSuccess(), 1200);
 
     } catch (err) {
       setLoading(false);
-      setMsg({ text: err.response?.data?.message || "Connection failed. Check your credentials.", type: "error" });
+      const raw = err.response?.data?.message || "";
+
+      // Provide specific guidance for known MT5 error codes
+      if (raw.includes("-6") || raw.toLowerCase().includes("auth")) {
+        setMsg({
+          text: "Authorization failed — see tips below.",
+          type: "error",
+        });
+        setShowHints(true);
+      } else if (raw.includes("-2") || raw.toLowerCase().includes("no connection")) {
+        setMsg({
+          text: "Cannot reach broker server. Check the server name is correct and your internet connection.",
+          type: "error",
+        });
+      } else {
+        setMsg({
+          text: raw || "Connection failed. Please check your credentials.",
+          type: "error",
+        });
+      }
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      connectAccount();
-    }
+    if (e.key === "Enter") connectAccount();
   };
 
   const msgColor =
@@ -99,15 +123,9 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img
-            src={logo}
-            alt="logo"
-            className="w-20 h-20 rounded-full object-cover border border-yellow-500/30"
-          />
+          <img src={logo} alt="logo" className="w-20 h-20 rounded-full object-cover border border-yellow-500/30" />
           <h1 className="text-3xl text-yellow-400 mt-4 font-semibold">Connect MT5</h1>
-          <p className="text-gray-400 mt-2 text-sm tracking-wider uppercase">
-            Secure Trading Integration
-          </p>
+          <p className="text-gray-400 mt-2 text-sm tracking-wider uppercase">Secure Trading Integration</p>
         </div>
 
         {/* Security note */}
@@ -128,30 +146,67 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
               focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           />
 
-          <input
-            type="password"
-            placeholder="MT5 Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={loading}
-            className="w-full bg-[#111] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none
-              focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          />
+          <div className="space-y-1">
+            <input
+              type="password"
+              placeholder="MT5 Password (master/trading password)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={loading}
+              className="w-full bg-[#111] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none
+                focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            />
+            <p className="text-[11px] text-gray-600 pl-1">
+              Use the <span className="text-yellow-500/60">master (trading) password</span>, not the investor/read-only password.
+            </p>
+          </div>
 
-          <select
-            value={server}
-            onChange={(e) => setServer(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={loading}
-            className="w-full bg-[#111] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none
-              focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <option value="">Select Broker Server</option>
-            {BROKER_SERVERS.map((s) => (
-              <option key={s} value={s} className="bg-black text-white">{s}</option>
-            ))}
-          </select>
+          {/* Server selector */}
+          <div className="space-y-2">
+            <select
+              value={server}
+              onChange={(e) => { setServer(e.target.value); setShowHints(false); }}
+              onKeyDown={handleKeyDown}
+              disabled={loading}
+              className="w-full bg-[#111] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none
+                focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <option value="">Select Broker Server</option>
+              {BROKER_SERVERS.map((s) => (
+                <option key={s.value} value={s.value} className="bg-black text-white">
+                  {s.label}
+                </option>
+              ))}
+              <option value={CUSTOM_VALUE} className="bg-black text-yellow-400">
+                ✏ Enter server manually…
+              </option>
+            </select>
+
+            {/* Custom server text input */}
+            {server === CUSTOM_VALUE && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                transition={{ duration: 0.2 }}
+              >
+                <input
+                  type="text"
+                  placeholder="e.g. PepperstoneCroupier-Demo 2"
+                  value={customServer}
+                  onChange={(e) => setCustomServer(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={loading}
+                  autoFocus
+                  className="w-full bg-[#111] border border-yellow-500/30 rounded-xl px-4 py-3 text-white outline-none
+                    focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                />
+                <p className="text-[11px] text-gray-600 pl-1 mt-1">
+                  Copy the exact server name from your MT5 terminal's login screen.
+                </p>
+              </motion.div>
+            )}
+          </div>
         </div>
 
         {/* Message */}
@@ -159,6 +214,50 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
           <p className={`text-center mt-4 text-sm font-medium ${msgColor}`}>
             {msg.text}
           </p>
+        )}
+
+        {/* Authorization failure hints */}
+        {showHints && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 bg-red-500/[0.07] border border-red-500/20 rounded-xl px-4 py-4"
+          >
+            <p className="text-[11px] font-bold text-red-400 uppercase tracking-widest mb-3">
+              Authorization Failed — Checklist
+            </p>
+            <ul className="space-y-2 text-xs text-gray-400">
+              <li className="flex items-start gap-2">
+                <span className="text-red-400 shrink-0 mt-px">1.</span>
+                <span>
+                  <span className="text-white font-medium">Use the Master (Trading) password</span>, not the
+                  Investor (read-only) password. MT5 generates both — check your account confirmation email.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-400 shrink-0 mt-px">2.</span>
+                <span>
+                  <span className="text-white font-medium">Verify the exact server name.</span> Open your MT5 terminal →
+                  File → Login → and copy the server name exactly. Try "PepperstoneCroupier-Demo" or
+                  "PepperstoneCroupier-Demo 2" if "Pepperstone-Demo" fails.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-400 shrink-0 mt-px">3.</span>
+                <span>
+                  <span className="text-white font-medium">New demo accounts</span> can take a few minutes to
+                  activate after creation. Wait 2–5 minutes and try again.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-400 shrink-0 mt-px">4.</span>
+                <span>
+                  Make sure the <span className="text-white font-medium">MT5 terminal is running</span> on the
+                  same machine as the bridge server.
+                </span>
+              </li>
+            </ul>
+          </motion.div>
         )}
 
         {/* Submit */}
@@ -172,7 +271,8 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
           {loading ? (
             <>
               <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeDashoffset="10" />
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"
+                  strokeDasharray="40" strokeDashoffset="10" />
               </svg>
               Connecting…
             </>

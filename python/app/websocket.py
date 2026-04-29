@@ -10,6 +10,7 @@ from app.services.mt5_service import (
     get_history_with_orders,
     get_live_prices,
     extract_symbols,
+    get_trade_allowed,
 )
 from app.services.analytics_service import calculate_analytics
 
@@ -72,15 +73,16 @@ async def dashboard_stream(websocket: WebSocket):
                 continue
 
             await websocket.send_json({
-                "type":         "dashboard",
-                "connected":    True,
-                "account":      account,
-                "trades":       trades,
-                "history":      history,
-                "analytics":    analytics,
-                "prices":       prices,
-                "symbols":      symbols,
-                "full_history": full_history,
+                "type":          "dashboard",
+                "connected":     True,
+                "trade_allowed": get_trade_allowed(),
+                "account":       account,
+                "trades":        trades,
+                "history":       history,
+                "analytics":     analytics,
+                "prices":        prices,
+                "symbols":       symbols,
+                "full_history":  full_history,
             })
 
             await asyncio.sleep(1)

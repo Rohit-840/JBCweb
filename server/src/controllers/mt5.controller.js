@@ -147,6 +147,30 @@ export const addMT5 = async (req, res) => {
   }
 };
 
+// ─── Close a single trade ─────────────────────────────────────────────────────
+export const closeTrade = async (req, res) => {
+  try {
+    const { ticket } = req.body;
+    if (!ticket) return res.status(400).json({ message: "ticket required" });
+    const { data } = await axios.post(`${PYTHON}/mt5/close`, { ticket });
+    if (!data.success) return res.status(400).json({ message: data.error || "Failed to close trade" });
+    res.json(data);
+  } catch {
+    res.status(500).json({ message: "Failed to close trade" });
+  }
+};
+
+// ─── Close multiple / all trades ─────────────────────────────────────────────
+export const closeAllTrades = async (req, res) => {
+  try {
+    const { tickets } = req.body;
+    const { data } = await axios.post(`${PYTHON}/mt5/close-all`, { tickets: tickets || [] });
+    res.status(data.success ? 200 : 207).json(data);
+  } catch {
+    res.status(500).json({ message: "Failed to close trades" });
+  }
+};
+
 export const getMT5Status = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("mt5Accounts");

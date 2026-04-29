@@ -10,6 +10,9 @@ from app.services.mt5_service import (
     get_symbol_deals,
     get_raw_deals_sample,
     is_connected,
+    ensure_connected,
+    close_position,
+    close_all_positions,
 )
 from pydantic import BaseModel
 import MetaTrader5 as mt5
@@ -74,6 +77,30 @@ async def mt5_snapshot(accounts: List[MT5Login]):
         for a in accounts
     ]
     return {"results": get_account_snapshot(credentials)}
+
+
+# ── Trade close endpoints ─────────────────────────────────────────────────────
+
+class ClosePositionRequest(BaseModel):
+    ticket: int
+
+
+class CloseAllRequest(BaseModel):
+    tickets: List[int] = []
+
+
+@app.post("/mt5/close")
+async def mt5_close(data: ClosePositionRequest):
+    if not ensure_connected():
+        return {"success": False, "error": "MT5 not connected"}
+    return close_position(data.ticket)
+
+
+@app.post("/mt5/close-all")
+async def mt5_close_all(data: CloseAllRequest):
+    if not ensure_connected():
+        return {"success": False, "error": "MT5 not connected"}
+    return close_all_positions(data.tickets if data.tickets else None)
 
 
 # ── Debug endpoints ───────────────────────────────────────────────────────────

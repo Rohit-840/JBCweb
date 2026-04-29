@@ -40,7 +40,7 @@ export default function Dashboard({ onLogout, onSwitchAccount }) {
   const renderPage = () => {
     switch (page) {
       case "dashboard": return <DashboardHome data={data} connected={connected} />;
-      case "trades":    return <OpenTrades data={data} />;
+      case "trades":    return <OpenTrades data={data} tradeAllowed={data?.trade_allowed !== false} />;
       case "history":   return <History data={data} />;
       case "analytics": return <Analytics data={data} />;
       case "profile":   return <Profile data={data} onLogout={onLogout} onSwitchAccount={onSwitchAccount} />;

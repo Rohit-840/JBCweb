@@ -238,6 +238,7 @@ export default function DashboardHome({ data, connected }) {
         fullHistory={strategyHistory ?? data?.full_history ?? []}
         strategySymbols={strategySymbols}
         strategyVolumeFilter={strategyVolumeFilter}
+        tradeAllowed={data?.trade_allowed !== false}
       />
     </div>
   );

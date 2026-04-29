@@ -67,17 +67,14 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
         ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
     >
-      /* logo */
+      {  /* logo */}
       <div className="flex flex-col font-bolin items-center pb-2 px-4" style={{ fontFamily: 'bolin gerii' }}>
         <div className="relative w-full flex items-center justify-center">
           <img
             src={logo}
             alt="JB Crownstone"
             className="w-25 h-25 p-6 rounded-xl object-cover"
-            style={{
-              filter:
-                'drop-shadow(0 0 6px rgba(212,175,55,0.85)) drop-shadow(0 0 14px rgba(212,175,55,0.5)) drop-shadow(0 0 28px rgba(212,175,55,0.25))',
-            }}
+            
           />
           <button
             onClick={onClose}
@@ -96,7 +93,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
 
       <div className="h-px bg-white/5 mx-4" />
 
-      /* nav */
+      {/* nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {NAV.map((item) => {
           const active = page === item.id;
@@ -121,7 +118,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
         })}
       </nav>
 
-      /* footer */
+      {/* footer */}
       <div className="px-4 pb-6 space-y-2">
         {/* switch account */}
         <button
