@@ -268,12 +268,12 @@ def close_position(ticket: int) -> dict:
     retries once on requote (retcode 10004), and only falls through to the
     next filling mode on invalid-fill errors (retcode 10030).
     """
-    # ── Pre-flight: AutoTrading must be enabled in the MT5 terminal ──────────
+    # ── Pre-flight: AlgoTrading must be enabled in the MT5 terminal ──────────
     if not get_trade_allowed():
         return {
             "success":    False,
-            "error":      "AutoTrading is disabled in your MT5 terminal.",
-            "action":     "Open MT5 → click the 'AutoTrading' button in the top toolbar until it lights up (green/yellow). Then retry.",
+            "error":      "AlgoTrading is disabled in your MT5 terminal.",
+            "action":     "Open MT5 → click the 'AlgoTrading' button in the top toolbar until it lights up (green/yellow). Then retry.",
             "code":       "AT_DISABLED",
         }
 
@@ -354,7 +354,7 @@ def close_position(ticket: int) -> dict:
         10018: "Market is closed",
         10019: "Not enough margin",
         10024: "Too many requests — wait a moment",
-        10027: "AutoTrading disabled — enable it in the MT5 terminal toolbar",
+        10027: "AlgoTrading disabled — enable it in the MT5 terminal toolbar",
         10030: "Filling mode not supported by broker",
     }
     label = RETCODE_LABELS.get(retcode, f"retcode {retcode}")

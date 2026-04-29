@@ -124,17 +124,17 @@ function ConfirmModal({ confirm, onCancel, onConfirm, loading, error, tradeAllow
             This action <span className="text-white font-medium">cannot be undone</span>.
           </p>
 
-          {/* AutoTrading disabled warning */}
+          {/* AlgoTrading disabled warning */}
           {!tradeAllowed && (
             <div className="mt-3 px-3 py-3 rounded-lg bg-yellow-500/10 border border-yellow-500/25 flex gap-2.5">
               <svg className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
               </svg>
               <div>
-                <p className="text-xs font-semibold text-yellow-400 mb-0.5">AutoTrading is disabled</p>
+                <p className="text-xs font-semibold text-yellow-400 mb-0.5">AlgoTrading is disabled</p>
                 <p className="text-[11px] text-yellow-400/70 leading-relaxed">
                   Open your <span className="font-semibold text-yellow-300">MT5 terminal</span> →
-                  click the <span className="font-semibold text-yellow-300">"AutoTrading"</span> button
+                  click the <span className="font-semibold text-yellow-300">"AlgoTrading"</span> button
                   in the top toolbar until it lights up, then retry.
                 </p>
               </div>
@@ -148,9 +148,9 @@ function ConfirmModal({ confirm, onCancel, onConfirm, loading, error, tradeAllow
               </svg>
               <div>
                 <p className="text-xs text-red-400 leading-relaxed">{error}</p>
-                {(error.includes("AutoTrading") || error.includes("10027")) && (
+                {(error.includes("AlgoTrading") || error.includes("10027")) && (
                   <p className="text-[11px] text-red-400/60 mt-1">
-                    MT5 terminal → toolbar → <strong>AutoTrading</strong> button → enable it → retry.
+                    MT5 terminal → toolbar → <strong>AlgoTrading</strong> button → enable it → retry.
                   </p>
                 )}
               </div>
@@ -231,14 +231,14 @@ function OpenTradesPanel({ trades, tradeAllowed = true }) {
   return (
     <>
       <div className="bg-[#111] rounded-xl border border-white/5 overflow-hidden flex-1">
-        {/* AutoTrading disabled banner */}
+        {/* AlgoTrading disabled banner */}
         {!tradeAllowed && (
           <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20">
             <svg className="w-3.5 h-3.5 text-yellow-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
             <p className="text-[10px] text-yellow-400/80 font-medium">
-              <span className="font-bold text-yellow-400">AutoTrading disabled</span> — open MT5 terminal and click the AutoTrading button to enable closing trades.
+              <span className="font-bold text-yellow-400">AlgoTrading disabled</span> — open MT5 terminal and click the AlgoTrading button to enable closing trades.
             </p>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function TypeBadge({ type }) {
@@ -90,6 +90,29 @@ export default function History({ data, filteredSymbols }) {
   const [customDate, setCustomDate] = useState("");      // YYYY-MM-DD
   const [dateFrom,   setDateFrom]   = useState("");      // YYYY-MM-DD
   const [dateTo,     setDateTo]     = useState("");      // YYYY-MM-DD
+  const [pnlFilter,  setPnlFilter]  = useState("All"); 
+
+  const topRef = useRef(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowScrollTop(!entry.isIntersecting);
+      },
+      { root: null, threshold: 0 }
+    );
+
+    if (topRef.current) {
+      observer.observe(topRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollToTop = () => {
+    topRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   // 1 — symbol filter (from parent strategy selection)
   const symbolFiltered = useMemo(
@@ -126,19 +149,29 @@ export default function History({ data, filteredSymbols }) {
     return symbolFiltered;
   }, [symbolFiltered, filterMode, timePeriod, customDate, dateFrom, dateTo]);
 
-  // 3 — search filter
+  // pnl filter
+  const pnlFiltered = useMemo(() => {
+    if (pnlFilter === "Profit") {
+      return periodFiltered.filter((h) => h.profit >= 0).sort((a, b) => b.profit - a.profit);
+    } else if (pnlFilter === "Loss") {
+      return periodFiltered.filter((h) => h.profit < 0).sort((a, b) => a.profit - b.profit);
+    }
+    return periodFiltered;
+  }, [periodFiltered, pnlFilter]);
+
+  // search filter
   const history = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return periodFiltered;
-    return periodFiltered.filter(
+    if (!q) return pnlFiltered;
+    return pnlFiltered.filter(
       (h) =>
         String(h.ticket).includes(q) ||
         h.symbol?.toLowerCase().includes(q) ||
         (h.type === 0 ? "buy" : "sell").includes(q)
     );
-  }, [periodFiltered, query]);
+  }, [pnlFiltered, query]);
 
-  const total    = periodFiltered.length;
+  const total    = pnlFiltered.length;
   const matched  = history.length;
   const hasQuery = query.trim().length > 0;
   const totalPnl = useMemo(() => history.reduce((s, h) => s + h.profit, 0), [history]);
@@ -180,7 +213,19 @@ export default function History({ data, filteredSymbols }) {
   };
 
   return (
-    <div className="p-5 min-h-full">
+    <div className="p-5 min-h-full relative">
+      <div ref={topRef} className="absolute top-0 left-0 w-full h-1 pointer-events-none" />
+      {/* scroll button */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-8 right-8 z-50 p-3 rounded-full bg-yellow-500 hover:bg-yellow-400 text-black shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all duration-300 hover:scale-110 ${
+          showScrollTop ? "opacity-100 translate-y-0 visible" : "opacity-0 translate-y-4 invisible"
+        }`}
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+        </svg>
+      </button>
 
       {/* ── Header + Search ── */}
       <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
@@ -230,6 +275,8 @@ export default function History({ data, filteredSymbols }) {
               {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
             </span>
           </div>
+
+          
         </div>
       </div>
 
@@ -262,7 +309,6 @@ export default function History({ data, filteredSymbols }) {
             })}
           </div>
 
-          {/* Divider */}
           <div className="w-px h-5 bg-white/[0.08] hidden sm:block" />
 
           {/* Custom date / range mode buttons */}
@@ -282,6 +328,33 @@ export default function History({ data, filteredSymbols }) {
               </svg>
               Range
             </ModeBtn>
+          </div>
+
+          <div className="w-px h-5 bg-white/[0.08] hidden sm:block" />
+          {/* pnl filter and sort */}
+          <div className="flex items-center bg-[#0a0a0a] border border-white/[0.07] rounded-lg p-[3px] gap-[2px]">
+            {["All", "Profit", "Loss"].map((label) => {
+              const isActive = pnlFilter === label;
+              return (
+                <button
+                  key={label}
+                  onClick={() => setPnlFilter(label)}
+                  className={[
+                    "flex-1 px-2 py-1.5 rounded-md text-[10px] font-bold tracking-[0.14em] transition-all duration-200 uppercase",
+                    isActive
+                      ? label === "Profit"
+                        ? "text-green-400 bg-green-500/[0.12] shadow-[0_0_10px_rgba(74,222,128,0.18),inset_0_0_8px_rgba(74,222,128,0.06)] border-green-500/25"
+                        : label === "Loss"
+                        ? "text-red-400 bg-red-500/[0.12] shadow-[0_0_10px_rgba(248,113,113,0.18),inset_0_0_8px_rgba(248,113,113,0.06)] border-red-500/25"
+                        : "text-yellow-400 bg-yellow-500/[0.12] shadow-[0_0_10px_rgba(234,179,8,0.18),inset_0_0_8px_rgba(234,179,8,0.06)] border-yellow-500/25"
+                      : "text-gray-600 hover:text-gray-400 border-transparent",
+                  ].join(" ")}
+                  style={{ borderWidth: "1px", borderStyle: "solid" }}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -83,7 +83,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
           : "border-yellow-500/15 bg-[#0d0d0d] cursor-pointer hover:border-yellow-500/40 hover:bg-[#111] hover:shadow-[0_0_40px_rgba(255,215,0,0.05)]",
       ].join(" ")}
     >
-      {/* Hover glow */}
+      {/* hover glow */}
       {!offline && (
         <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-yellow-500/[0.03] to-transparent pointer-events-none" />
       )}
@@ -100,7 +100,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
               flex flex-col items-center justify-center gap-5 px-6"
             onClick={(e) => e.stopPropagation()}
           >
-        {/* Warning icon */}
+        {/* warning icon */}
             <div className="w-14 h-14 rounded-full bg-red-500/20 border-2 border-red-500/60 flex items-center justify-center">
               <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
@@ -154,7 +154,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
           <p className="text-gray-500 text-xs mt-0.5 truncate max-w-[160px]">{account.server}</p>
         </div>
 
-        {/* Status badge and delete button stacked */}
+        {/* status badge and delete button stacked */}
         <div className="flex flex-col items-end gap-2 shrink-0">
           {offline ? (
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20">
@@ -186,7 +186,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* stats */}
       {!offline && (
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -210,7 +210,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
         <p className="text-xs text-gray-600">{account.error || "Connection unavailable"}</p>
       )}
 
-      {/* ── CTA ── */}
+      {/* cta */}
       {!offline && (
         <button
           disabled={disabled}
@@ -239,7 +239,7 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
   );
 }
 
-// add account card (sits inline in the accounts grid) 
+// add account card
 function AddAccountCard({ onAdd, index }) {
   return (
     <motion.div

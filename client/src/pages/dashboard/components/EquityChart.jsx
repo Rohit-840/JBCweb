@@ -1,11 +1,11 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// constants
 const PERIODS     = ["1D", "1W", "1M", "1Y"];
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAY_SHORT   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-// ── Period start (epoch seconds) ──────────────────────────────────────────────
+// period start
 function getPeriodCutoff(label) {
   const n = new Date();
   switch (label) {
@@ -25,31 +25,31 @@ function getPeriodCutoff(label) {
   }
 }
 
-// ── Period end (epoch ms) — right edge of X-axis ──────────────────────────────
+// period end
 function getPeriodEnd(label) {
   const n = new Date();
   switch (label) {
     case "1D":
-      // Midnight tonight (start of tomorrow)
+      // midnight tonight 
       return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0).getTime();
     case "1W": {
-      // Next Monday midnight (end of Sunday)
+      // next monday midnight
       const d    = n.getDay();
       const fwd  = d === 0 ? 1 : 8 - d;
       return new Date(n.getFullYear(), n.getMonth(), n.getDate() + fwd, 0, 0, 0, 0).getTime();
     }
     case "1M":
-      // First day of next month
+      // first day of next month
       return new Date(n.getFullYear(), n.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
     case "1Y":
-      // Jan 1 of next year
+      // jan 1 of next year
       return new Date(n.getFullYear() + 1, 0, 1, 0, 0, 0, 0).getTime();
     default:
       return Date.now();
   }
 }
 
-// ── Build cumulative-P&L points ───────────────────────────────────────────────
+// build cumulative-pnl points
 function buildPts(history, periodLabel) {
   const cutoff = getPeriodCutoff(periodLabel);
   const sorted = (history || [])
@@ -60,7 +60,7 @@ function buildPts(history, periodLabel) {
   return [{ time: cutoff * 1000, equity: 0 }, ...pts];
 }
 
-// ── Smooth cubic-bezier SVG line ──────────────────────────────────────────────
+// smooth cubic bezier svg line
 function smoothPath(svgPts) {
   return svgPts.reduce((acc, p, i) => {
     if (i === 0) return `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
@@ -70,16 +70,12 @@ function smoothPath(svgPts) {
   }, "");
 }
 
-// ── X-axis tick generator ─────────────────────────────────────────────────────
-// Iterates from period START for a fixed count — never skips the first label.
-// inBounds uses the chart pixel range so future ticks (past "now" but within
-// the period end) are correctly shown as the X-axis extends to period end.
+// x axis tick generator
 function buildXTicks(minT, maxT, period, toX, padL, chartW) {
   const ticks    = [];
   const inBounds = (t) => { const x = toX(t); return x >= padL - 1 && x <= padL + chartW + 1; };
 
   if (period === "1D") {
-    // 00:00, 04:00, 08:00, 12:00, 16:00, 20:00  (6 fixed ticks)
     const base = new Date(minT);
     base.setHours(0, 0, 0, 0);
     for (let h = 0; h <= 20; h += 4) {
@@ -91,7 +87,6 @@ function buildXTicks(minT, maxT, period, toX, padL, chartW) {
     }
 
   } else if (period === "1W") {
-    // Mon → Sun  (7 ticks, starting from Monday = minT)
     const d = new Date(minT);
     d.setHours(0, 0, 0, 0);
     for (let i = 0; i < 7; i++) {
@@ -102,7 +97,6 @@ function buildXTicks(minT, maxT, period, toX, padL, chartW) {
     }
 
   } else if (period === "1M") {
-    // 1st, 8th, 15th, 22nd, 29th  (5 ticks, weekly from 1st)
     const d = new Date(minT);
     d.setHours(0, 0, 0, 0);
     for (let i = 0; i < 5; i++) {
@@ -113,7 +107,6 @@ function buildXTicks(minT, maxT, period, toX, padL, chartW) {
     }
 
   } else if (period === "1Y") {
-    // Jan → Dec  (12 ticks, 1st of each month)
     const d = new Date(minT);
     d.setHours(0, 0, 0, 0);
     for (let i = 0; i < 12; i++) {
@@ -127,7 +120,7 @@ function buildXTicks(minT, maxT, period, toX, padL, chartW) {
   return ticks;
 }
 
-// Auto-detect period from data range (strategy mode only)
+// auto-detect period from data range
 function detectPeriod(minT, maxT) {
   const days = (maxT - minT) / 86_400_000;
   if (days <= 2)  return "1D";
@@ -136,7 +129,7 @@ function detectPeriod(minT, maxT) {
   return "1Y";
 }
 
-// ── Period filter button group ────────────────────────────────────────────────
+// period filter button group
 function PeriodSelector({ period, onChange }) {
   return (
     <div className="flex items-center bg-[#0a0a0a] border border-white/[0.07] rounded-lg p-[3px] gap-[2px]">
@@ -163,7 +156,7 @@ function PeriodSelector({ period, onChange }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// main component
 export default function EquityChart({ equityHistory, fullHistory, account, strategyData, strategyName }) {
   const containerRef = useRef(null);
   const [width,  setWidth]  = useState(600);
@@ -193,7 +186,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
   const pts     = equityPts;
   const hasData = pts.length >= 2;
 
-  // ── Layout ────────────────────────────────────────────────────────────────
+  // layout
   const height = 240;
   const padL   = 54;
   const padR   = 12;
@@ -202,16 +195,14 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
   const chartW = Math.max(width - padL - padR, 10);
   const chartH = height - padT - padB;
 
-  // ── Time range ────────────────────────────────────────────────────────────
-  // X-axis spans the FULL period (start → end) so ticks are always visible
-  // even early in the period. The curve only fills up to "now".
+  // time range
   const dataMin  = hasData ? Math.min(...pts.map((p) => p.time)) : 0;
   const dataMax  = hasData ? Math.max(...pts.map((p) => p.time)) : 1;
   const minT     = isStrategy ? dataMin : getPeriodCutoff(period) * 1000;
   const maxT     = isStrategy ? dataMax : Math.max(dataMax, getPeriodEnd(period));
   const tSpan    = maxT - minT || 1;
 
-  // ── Y scale ───────────────────────────────────────────────────────────────
+  // y scale
   const values  = hasData ? pts.map((p) => p.equity) : [0, 1];
   const rawMinV = Math.min(0, ...values);
   const rawMaxV = Math.max(...values);
@@ -224,7 +215,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
   const toY   = (v) => padT + (1 - (v - minV) / range) * chartH;
   const zeroY = toY(0);
 
-  // ── SVG paths ─────────────────────────────────────────────────────────────
+  // svg paths
   let pathD = "", areaD = "", svgPts = [];
   if (hasData) {
     svgPts = pts.map((p) => ({ x: toX(p.time), y: toY(p.equity) }));
@@ -233,7 +224,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
     areaD  = `${pathD} L ${l.x.toFixed(1)} ${zeroY.toFixed(1)} L ${f.x.toFixed(1)} ${zeroY.toFixed(1)} Z`;
   }
 
-  // ── Y-axis labels ─────────────────────────────────────────────────────────
+  // y axis labels
   const yTicks = Array.from({ length: 5 }, (_, i) => {
     const frac = i / 4;
     const v    = minV + frac * range;
@@ -243,13 +234,13 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
     return { y: padT + (1 - frac) * chartH, val: fmt };
   });
 
-  // ── X-axis ticks ──────────────────────────────────────────────────────────
+  // x axis ticks
   const effectivePeriod = isStrategy ? detectPeriod(minT, maxT) : period;
   const xTicks = hasData
     ? buildXTicks(minT, maxT, effectivePeriod, toX, padL, chartW)
     : [];
 
-  // ── Colors & labels ───────────────────────────────────────────────────────
+  // colors & labels
   const lineColor = isStrategy ? "#22c55e" : "#d4af37";
   const gradColor = isStrategy ? "#22c55e" : "#d4af37";
   const title     = isStrategy ? `${strategyName} P/L` : "Equity Curve";
@@ -264,11 +255,11 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
       className="relative bg-[#0d0d0d] rounded-2xl p-5 border border-white/[0.06] flex-1 min-w-0 overflow-hidden"
       style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 32px rgba(0,0,0,0.5)" }}
     >
-      {/* Ambient corner glow */}
+      {/* ambient corner glow */}
       <div className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full"
         style={{ background: `radial-gradient(circle, ${gradColor}14 0%, transparent 70%)` }} />
 
-      {/* ── Header ── */}
+      {/* header */}
       <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
         <div>
           <p className="text-[9px] tracking-[0.22em] text-yellow-500/50 uppercase font-bold mb-0.5">
@@ -296,7 +287,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
         </div>
       </div>
 
-      {/* ── SVG chart ── */}
+      {/* svg chart */}
       <div ref={containerRef} className="w-full">
         <svg width={width} height={height} style={{ display: "block" }}>
           <defs>
@@ -317,14 +308,14 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
             </pattern>
           </defs>
 
-          {/* Scan-line overlay */}
+          {/* scan line overlay */}
           <rect x={padL} y={padT} width={chartW} height={chartH} fill="url(#ecScan)" />
 
-          {/* Axis borders */}
+          {/* axis borders */}
           <line x1={padL} y1={padT} x2={padL} y2={padT + chartH} stroke="#2a2a2a" strokeWidth="1" />
           <line x1={padL} y1={padT + chartH} x2={padL + chartW} y2={padT + chartH} stroke="#2a2a2a" strokeWidth="1" />
 
-          {/* Horizontal grid lines */}
+          {/* horizontal grid lines */}
           {Array.from({ length: 5 }).map((_, i) => (
             <line key={i}
               x1={padL} y1={padT + (i / 4) * chartH}
@@ -333,7 +324,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
             />
           ))}
 
-          {/* Vertical grid lines aligned to X ticks */}
+          {/* vertical grid lines */}
           {xTicks.map((t, i) => (
             <line key={`vg${i}`}
               x1={t.x} y1={padT} x2={t.x} y2={padT + chartH}
@@ -341,7 +332,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
             />
           ))}
 
-          {/* Y-axis labels */}
+          {/* y axis labels */}
           {yTicks.map((t, i) => (
             <text key={i} x={padL - 6} y={t.y + 4}
               fill="#555" fontSize="9" fontFamily="monospace" textAnchor="end">
@@ -351,25 +342,24 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
 
           {hasData ? (
             <>
-              {/* Zero baseline */}
+              {/* zero baseline */}
               {minV < 0 && maxV > 0 && (
                 <line x1={padL} x2={padL + chartW} y1={zeroY} y2={zeroY}
                   stroke="#333" strokeWidth="1" strokeDasharray="4,3" />
               )}
 
-              {/* Area fill */}
+              {/* area fill */}
               <path d={areaD} fill="url(#ecAreaGrad)" />
 
-              {/* Glow layer */}
+              {/* glow layer */}
               <path d={pathD} fill="none"
                 stroke={lineColor} strokeWidth="3" strokeLinecap="round"
                 filter="url(#ecGlow)" opacity="0.55" />
 
-              {/* Sharp line */}
+              {/* sharp line */}
               <path d={pathD} fill="none"
                 stroke={lineColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 
-              {/* "Now" marker — where the curve ends relative to full period */}
               {svgPts.length > 0 && (() => {
                 const last = svgPts[svgPts.length - 1];
                 return (
@@ -380,7 +370,7 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
                 );
               })()}
 
-              {/* X-axis labels */}
+              {/* x axis labels */}
               {xTicks.map((t, i) => (
                 <text key={i} x={t.x} y={height - 6}
                   fill="#555" fontSize="9" textAnchor="middle" fontFamily="monospace">

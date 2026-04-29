@@ -17,7 +17,7 @@ export default function AddSymbolInput({
   const inputRef = useRef(null);
   const wrapRef  = useRef(null);
 
-  // Sorted suggestions: startsWith matches first, then contains
+  // sorted suggestions: startsWith matches first, then contains
   const matches = useMemo(() => {
     const q = value.trim().toLowerCase();
     if (!q) return suggestions.slice(0, 8);
@@ -33,7 +33,7 @@ export default function AddSymbolInput({
     }
   };
 
-  // Close dropdown on outside click or scroll
+  // close dropdown on outside click or scroll
   useEffect(() => {
     if (!dropOpen) return;
     const close    = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setDropOpen(false); };
@@ -134,7 +134,7 @@ export default function AddSymbolInput({
 
       {error && <p className="mt-1.5 text-[10px] text-red-400">{error}</p>}
 
-      {/* Fixed-position dropdown — escapes any overflow:hidden parent */}
+      {/* fixed-position dropdown */}
       {dropOpen && matches.length > 0 && (
         <div
           style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
