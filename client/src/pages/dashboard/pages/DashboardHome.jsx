@@ -5,7 +5,7 @@ import EquityChart      from "../components/EquityChart.jsx";
 import TradingAnalytics from "../components/TradingAnalytics.jsx";
 import TradeSummary     from "../components/TradeSummary.jsx";
 import { applyTPSLFilter } from "../constants.js";
-import { buildEffectiveStrategies } from "../utils/symbolUtils.js";
+import { buildEffectiveStrategies, buildStrategyExpertRules, matchesStrategyRule } from "../utils/symbolUtils.js";
 import api from "../../../services/api.js";
 
 function computeStrategyAnalytics(history) {
@@ -40,6 +40,10 @@ export default function DashboardHome({ data, connected }) {
     () => buildEffectiveStrategies(customizations),
     [customizations]
   );
+  const expertRulesByStrategy = useMemo(
+    () => buildStrategyExpertRules(customizations),
+    [customizations]
+  );
 
   const strategySymbols      = activeStrategy ? strategies[activeStrategy] : null;
   const strategySymbolsUpper = useMemo(
@@ -51,17 +55,17 @@ export default function DashboardHome({ data, connected }) {
   const strategyHistory = useMemo(() => {
     if (!strategySymbolsUpper) return null;
     const bySymbol = (data?.full_history || []).filter(
-      (h) => strategySymbolsUpper.includes(h.symbol?.trim().toUpperCase())
+      (h) => matchesStrategyRule(h, activeStrategy, strategySymbolsUpper, expertRulesByStrategy)
     );
     return applyTPSLFilter(bySymbol, activeStrategy);
-  }, [strategySymbolsUpper, activeStrategy, data?.full_history]);
+  }, [strategySymbolsUpper, expertRulesByStrategy, activeStrategy, data?.full_history]);
 
   const strategyTrades = useMemo(() => {
     if (!strategySymbolsUpper) return null;
     return (data?.trades || []).filter(
-      (t) => strategySymbolsUpper.includes(t.symbol?.trim().toUpperCase())
+      (t) => matchesStrategyRule(t, activeStrategy, strategySymbolsUpper, expertRulesByStrategy)
     );
-  }, [strategySymbolsUpper, data?.trades]);
+  }, [strategySymbolsUpper, expertRulesByStrategy, activeStrategy, data?.trades]);
 
   const availableStrategyVolumes = useMemo(() => {
     if (!strategyHistory) return [];
@@ -106,22 +110,33 @@ export default function DashboardHome({ data, connected }) {
     : (data?.trades?.length ?? 0);
 
   // ── Strategy symbol callbacks ─────────────────────────────────────────────
-  const handleAddSymbol = useCallback(async (strategyName, normalisedSymbol) => {
+  const handleAddSymbol = useCallback(async (strategyName, normalisedSymbol, expert = {}) => {
     setSymbolLoading(true);
     try {
       const token = localStorage.getItem("token");
       await api.post(
         `/strategies/${strategyName}/add`,
-        { symbol: normalisedSymbol },
+        {
+          symbol: normalisedSymbol,
+          ...(expert.magic ? { magic: expert.magic, timeframe: expert.timeframe } : {}),
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setCustomizations((prev) => {
-        const delta = prev[strategyName] || { added: [], removed: [] };
+        const delta = prev[strategyName] || { added: [], removed: [], expertRules: [] };
         const removed = delta.removed.filter((s) => s !== normalisedSymbol);
         const added   = delta.added.includes(normalisedSymbol)
           ? delta.added
           : [...delta.added, normalisedSymbol];
-        return { ...prev, [strategyName]: { added, removed } };
+        const expertRules = expert.magic
+          ? [
+              ...(delta.expertRules || []).filter(
+                (rule) => !(rule.symbol === normalisedSymbol && Number(rule.magic) === Number(expert.magic))
+              ),
+              { symbol: normalisedSymbol, magic: Number(expert.magic), timeframe: expert.timeframe },
+            ]
+          : (delta.expertRules || []);
+        return { ...prev, [strategyName]: { added, removed, expertRules } };
       });
       return true;
     } catch {
@@ -140,15 +155,16 @@ export default function DashboardHome({ data, connected }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setCustomizations((prev) => {
-        const delta   = prev[strategyName] || { added: [], removed: [] };
+        const delta   = prev[strategyName] || { added: [], removed: [], expertRules: [] };
         const inAdded = delta.added.includes(normalisedSymbol);
+        const expertRules = (delta.expertRules || []).filter((rule) => rule.symbol !== normalisedSymbol);
         if (inAdded) {
-          return { ...prev, [strategyName]: { ...delta, added: delta.added.filter((s) => s !== normalisedSymbol) } };
+          return { ...prev, [strategyName]: { ...delta, added: delta.added.filter((s) => s !== normalisedSymbol), expertRules } };
         }
         const removed = delta.removed.includes(normalisedSymbol)
           ? delta.removed
           : [...delta.removed, normalisedSymbol];
-        return { ...prev, [strategyName]: { ...delta, removed } };
+        return { ...prev, [strategyName]: { ...delta, removed, expertRules } };
       });
     } catch { /* silent */ }
   }, []);
@@ -205,6 +221,7 @@ export default function DashboardHome({ data, connected }) {
       <StrategyFilter
         data={data}
         strategies={strategies}
+        expertRules={expertRulesByStrategy}
         activeStrategy={activeStrategy}
         onStrategyChange={setActiveStrategy}
         onAddSymbol={handleAddSymbol}

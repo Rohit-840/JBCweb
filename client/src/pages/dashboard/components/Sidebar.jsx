@@ -73,7 +73,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
           <img
             src={logo}
             alt="JB Crownstone"
-            className="w-25 h-25 p-6 rounded-xl object-cover"
+            className="w-[180px] h-[180px] p-2 rounded-xl object-contain"
             
           />
           <button
@@ -85,10 +85,10 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
           </button>
         </div>
         <p
-          className="mt-3 text-[18px] font-bold tracking-[0.18em] text-yellow-400/90"
+          className="-mt-2 text-[18px] leading-6 font-bold tracking-[0.18em] text-yellow-400/90"
           style={{ textShadow: '0 0 6px rgba(212,175,55,0.4), 0 0 14px rgba(212,175,55,0.2)' }}
         >CROWNSTONE</p>
-        <p className="text-[12px] tracking-[0.22em] text-gray-500 uppercase">Private Wealth</p>
+        <p className="text-[12px] leading-5 tracking-[0.22em] text-gray-500 uppercase">Private Wealth</p>
       </div>
 
       <div className="h-px bg-white/5 mx-4" />

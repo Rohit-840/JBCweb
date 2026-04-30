@@ -157,10 +157,11 @@ function PeriodSelector({ period, onChange }) {
 }
 
 // main component
-export default function EquityChart({ equityHistory, fullHistory, account, strategyData, strategyName }) {
+export default function EquityChart({ fullHistory, account, strategyData, strategyName }) {
   const containerRef = useRef(null);
   const [width,  setWidth]  = useState(600);
   const [period, setPeriod] = useState("1M");
+  const [nowMs,  setNowMs]  = useState(0);
 
   useEffect(() => {
     const obs = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
@@ -168,23 +169,43 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
     return () => obs.disconnect();
   }, []);
 
+  useEffect(() => {
+    setNowMs(Date.now());
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const isStrategy = !!strategyData && strategyData.length >= 2;
 
-  const equityPts = useMemo(() => {
-    if (isStrategy) return strategyData;
-
+  const accountEquityPts = useMemo(() => {
     const base = buildPts(fullHistory, period);
 
     const floatingPnl   = account?.profit;
     if (floatingPnl == null) return base;
     const lastCum        = base.length > 0 ? base[base.length - 1].equity : 0;
     const lastKnownTime  = base.length > 0 ? base[base.length - 1].time   : 0;
-    const liveTime       = Math.max(Date.now(), lastKnownTime + 1000);
+    const liveTime       = Math.max(nowMs || lastKnownTime + 1000, lastKnownTime + 1000);
     return [...base, { time: liveTime, equity: lastCum + floatingPnl }];
-  }, [isStrategy, strategyData, fullHistory, period, account?.profit]); // eslint-disable-line
+  }, [fullHistory, period, account?.profit, nowMs]);
 
-  const pts     = equityPts;
-  const hasData = pts.length >= 2;
+  const strategyPts = useMemo(() => {
+    if (!isStrategy) return [];
+    const cutoff = getPeriodCutoff(period) * 1000;
+    const sorted = [...strategyData].sort((a, b) => a.time - b.time);
+    const beforeCutoff = [...sorted].reverse().find((p) => p.time < cutoff);
+    const baseValue = beforeCutoff?.equity ?? 0;
+    const visible = sorted
+      .filter((p) => p.time >= cutoff)
+      .map((p) => ({ ...p, equity: p.equity - baseValue }));
+    return [{ time: cutoff, equity: 0 }, ...visible];
+  }, [isStrategy, strategyData, period]);
+
+  const primaryPts = isStrategy ? strategyPts : accountEquityPts;
+  const allSeriesPts = isStrategy
+    ? [...accountEquityPts, ...strategyPts]
+    : accountEquityPts;
+  const hasData = primaryPts.length >= 2;
+  const hasAnyData = allSeriesPts.length >= 2;
 
   // layout
   const height = 240;
@@ -196,14 +217,13 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
   const chartH = height - padT - padB;
 
   // time range
-  const dataMin  = hasData ? Math.min(...pts.map((p) => p.time)) : 0;
-  const dataMax  = hasData ? Math.max(...pts.map((p) => p.time)) : 1;
-  const minT     = isStrategy ? dataMin : getPeriodCutoff(period) * 1000;
-  const maxT     = isStrategy ? dataMax : Math.max(dataMax, getPeriodEnd(period));
+  const dataMax  = hasAnyData ? Math.max(...allSeriesPts.map((p) => p.time)) : 1;
+  const minT     = getPeriodCutoff(period) * 1000;
+  const maxT     = Math.max(dataMax, getPeriodEnd(period));
   const tSpan    = maxT - minT || 1;
 
   // y scale
-  const values  = hasData ? pts.map((p) => p.equity) : [0, 1];
+  const values  = hasAnyData ? allSeriesPts.map((p) => p.equity) : [0, 1];
   const rawMinV = Math.min(0, ...values);
   const rawMaxV = Math.max(...values);
   const vPad    = (rawMaxV - rawMinV || 1) * 0.12;
@@ -216,13 +236,24 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
   const zeroY = toY(0);
 
   // svg paths
+  const buildSeriesPath = (pts) => {
+    if (!pts || pts.length < 2) return { pathD: "", areaD: "", svgPts: [] };
+    const svgPts = pts.map((p) => ({ x: toX(p.time), y: toY(p.equity) }));
+    const pathD  = smoothPath(svgPts);
+    const f = svgPts[0], l = svgPts[svgPts.length - 1];
+    const areaD  = `${pathD} L ${l.x.toFixed(1)} ${zeroY.toFixed(1)} L ${f.x.toFixed(1)} ${zeroY.toFixed(1)} Z`;
+    return { pathD, areaD, svgPts };
+  };
+
   let pathD = "", areaD = "", svgPts = [];
   if (hasData) {
-    svgPts = pts.map((p) => ({ x: toX(p.time), y: toY(p.equity) }));
+    svgPts = primaryPts.map((p) => ({ x: toX(p.time), y: toY(p.equity) }));
     pathD  = smoothPath(svgPts);
     const f = svgPts[0], l = svgPts[svgPts.length - 1];
     areaD  = `${pathD} L ${l.x.toFixed(1)} ${zeroY.toFixed(1)} L ${f.x.toFixed(1)} ${zeroY.toFixed(1)} Z`;
   }
+  const accountSeries  = buildSeriesPath(accountEquityPts);
+  const strategySeries = buildSeriesPath(strategyPts);
 
   // y axis labels
   const yTicks = Array.from({ length: 5 }, (_, i) => {
@@ -245,9 +276,13 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
   const gradColor = isStrategy ? "#22c55e" : "#d4af37";
   const title     = isStrategy ? `${strategyName} P/L` : "Equity Curve";
 
-  const latestVal = hasData ? pts[pts.length - 1].equity : null;
+  const latestVal = hasData ? primaryPts[primaryPts.length - 1].equity : null;
+  const latestAccountVal = accountEquityPts.length >= 2 ? accountEquityPts[accountEquityPts.length - 1].equity : null;
   const latestFmt = latestVal !== null
     ? `${latestVal >= 0 ? "+" : ""}$${Math.abs(latestVal).toLocaleString("en-US", { maximumFractionDigits: 2 })}`
+    : null;
+  const latestAccountFmt = latestAccountVal !== null
+    ? `${latestAccountVal >= 0 ? "+" : ""}$${Math.abs(latestAccountVal).toLocaleString("en-US", { maximumFractionDigits: 2 })}`
     : null;
 
   return (
@@ -272,20 +307,41 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
                 {latestFmt}
               </span>
             )}
+            {isStrategy && latestAccountFmt && (
+              <span className="text-[10px] font-bold text-yellow-400/80">
+                Equity {latestAccountFmt}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          {isStrategy ? (
+          {isStrategy && (
             <span className="text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-lg
               bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold">
               {strategyName}
             </span>
-          ) : (
-            <PeriodSelector period={period} onChange={setPeriod} />
           )}
+          <PeriodSelector period={period} onChange={setPeriod} />
         </div>
       </div>
+
+      {isStrategy && (
+        <div className="flex items-center gap-4 mb-2 px-1">
+          <div className="flex items-center gap-2">
+            <svg width="24" height="8">
+              <line x1="0" y1="4" x2="24" y2="4" stroke="#d4af37" strokeWidth="2" />
+            </svg>
+            <span className="text-[10px] text-yellow-400/80 font-semibold tracking-wide">Equity Curve</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <svg width="24" height="8">
+              <line x1="0" y1="4" x2="24" y2="4" stroke="#22c55e" strokeWidth="2" />
+            </svg>
+            <span className="text-[10px] text-emerald-400 font-semibold tracking-wide">{strategyName} P/L</span>
+          </div>
+        </div>
+      )}
 
       {/* svg chart */}
       <div ref={containerRef} className="w-full">
@@ -348,27 +404,74 @@ export default function EquityChart({ equityHistory, fullHistory, account, strat
                   stroke="#333" strokeWidth="1" strokeDasharray="4,3" />
               )}
 
-              {/* area fill */}
-              <path d={areaD} fill="url(#ecAreaGrad)" />
+              {isStrategy ? (
+                <>
+                  {accountSeries.areaD && <path d={accountSeries.areaD} fill="url(#ecAreaGrad)" opacity="0.45" />}
+                  {accountSeries.pathD && (
+                    <>
+                      <path d={accountSeries.pathD} fill="none"
+                        stroke="#d4af37" strokeWidth="3" strokeLinecap="round"
+                        filter="url(#ecGlow)" opacity="0.35" />
+                      <path d={accountSeries.pathD} fill="none"
+                        stroke="#d4af37" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+                    </>
+                  )}
 
-              {/* glow layer */}
-              <path d={pathD} fill="none"
-                stroke={lineColor} strokeWidth="3" strokeLinecap="round"
-                filter="url(#ecGlow)" opacity="0.55" />
+                  {strategySeries.pathD && (
+                    <>
+                      <path d={strategySeries.pathD} fill="none"
+                        stroke="#22c55e" strokeWidth="3" strokeLinecap="round"
+                        filter="url(#ecGlow)" opacity="0.45" />
+                      <path d={strategySeries.pathD} fill="none"
+                        stroke="#22c55e" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                    </>
+                  )}
 
-              {/* sharp line */}
-              <path d={pathD} fill="none"
-                stroke={lineColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  {accountSeries.svgPts.length > 0 && (() => {
+                    const last = accountSeries.svgPts[accountSeries.svgPts.length - 1];
+                    return (
+                      <>
+                        <circle cx={last.x} cy={last.y} r="5" fill="#d4af37" fillOpacity="0.12" />
+                        <circle cx={last.x} cy={last.y} r="2.5" fill="#d4af37" stroke="#0d0d0d" strokeWidth="1.5" />
+                      </>
+                    );
+                  })()}
 
-              {svgPts.length > 0 && (() => {
-                const last = svgPts[svgPts.length - 1];
-                return (
-                  <>
-                    <circle cx={last.x} cy={last.y} r="6" fill={lineColor} fillOpacity="0.12" />
-                    <circle cx={last.x} cy={last.y} r="3" fill={lineColor} stroke="#0d0d0d" strokeWidth="1.5" />
-                  </>
-                );
-              })()}
+                  {strategySeries.svgPts.length > 0 && (() => {
+                    const last = strategySeries.svgPts[strategySeries.svgPts.length - 1];
+                    return (
+                      <>
+                        <circle cx={last.x} cy={last.y} r="6" fill="#22c55e" fillOpacity="0.12" />
+                        <circle cx={last.x} cy={last.y} r="3" fill="#22c55e" stroke="#0d0d0d" strokeWidth="1.5" />
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <>
+                  {/* area fill */}
+                  <path d={areaD} fill="url(#ecAreaGrad)" />
+
+                  {/* glow layer */}
+                  <path d={pathD} fill="none"
+                    stroke={lineColor} strokeWidth="3" strokeLinecap="round"
+                    filter="url(#ecGlow)" opacity="0.55" />
+
+                  {/* sharp line */}
+                  <path d={pathD} fill="none"
+                    stroke={lineColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                  {svgPts.length > 0 && (() => {
+                    const last = svgPts[svgPts.length - 1];
+                    return (
+                      <>
+                        <circle cx={last.x} cy={last.y} r="6" fill={lineColor} fillOpacity="0.12" />
+                        <circle cx={last.x} cy={last.y} r="3" fill={lineColor} stroke="#0d0d0d" strokeWidth="1.5" />
+                      </>
+                    );
+                  })()}
+                </>
+              )}
 
               {/* x axis labels */}
               {xTicks.map((t, i) => (

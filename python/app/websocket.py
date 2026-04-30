@@ -8,6 +8,7 @@ from app.services.mt5_service import (
     get_open_trades,
     get_history,
     get_history_with_orders,
+    get_history_entries,
     get_live_prices,
     extract_symbols,
     get_trade_allowed,
@@ -24,6 +25,7 @@ _EMPTY = {
     "prices":       {},
     "symbols":      [],
     "full_history": [],
+    "history_entries": [],
 }
 
 # Refresh the 365-day history every N ticks (1 tick ≈ 1 second).
@@ -35,6 +37,7 @@ async def dashboard_stream(websocket: WebSocket):
     await websocket.accept()
 
     full_history: list = []
+    history_entries: list = []
     tick: int = 0
 
     try:
@@ -53,6 +56,7 @@ async def dashboard_stream(websocket: WebSocket):
             if tick % _HISTORY_INTERVAL == 0:
                 try:
                     full_history = get_history_with_orders(365)
+                    history_entries = get_history_entries(365)
                 except Exception as exc:
                     print(f"⚠️  history refresh error: {exc}")
                     # keep using last good full_history
@@ -83,6 +87,7 @@ async def dashboard_stream(websocket: WebSocket):
                 "prices":        prices,
                 "symbols":       symbols,
                 "full_history":  full_history,
+                "history_entries": history_entries,
             })
 
             await asyncio.sleep(1)

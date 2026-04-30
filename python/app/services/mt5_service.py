@@ -76,6 +76,7 @@ def get_open_trades() -> list:
             "volume": pos.volume, "price_open": pos.price_open,
             "price_current": pos.price_current, "profit": pos.profit,
             "sl": pos.sl, "tp": pos.tp, "time": pos.time, "comment": pos.comment,
+            "magic": int(pos.magic),
         }
         for pos in positions
     ]
@@ -112,6 +113,7 @@ def get_history() -> list:
             "price":      d.price,   "profit":      d.profit,
             "commission": d.commission, "swap":      d.swap,
             "time":       d.time,    "comment":     d.comment,
+            "magic":      int(d.magic),
         })
     return result
 
@@ -197,19 +199,28 @@ def get_history_with_orders(days: int = 365) -> list:
         open_order = order_map.get(open_deal.order) if open_deal else None
 
         result.append({
-            "ticket":      int(d.ticket),
-            "position_id": int(d.position_id),
-            "symbol":      symbol,
-            "type":        int(open_deal.type) if open_deal else int(d.type),
-            "volume":      float(d.volume),
-            "price_open":  float(open_deal.price) if open_deal else float(d.price),
-            "price_close": float(d.price),
-            "sl":          float(open_order.sl) if open_order else 0.0,
-            "tp":          float(open_order.tp) if open_order else 0.0,
-            "profit":      float(d.profit),
-            "commission":  float(d.commission),
-            "swap":        float(d.swap),
-            "time":        int(d.time),
+            "ticket":        int(d.ticket),
+            "deal_ticket":   int(d.ticket),
+            "order":         int(open_deal.order) if open_deal else int(d.order),
+            "open_ticket":   int(open_deal.order) if open_deal else int(d.order),
+            "position_id":   int(d.position_id),
+            "symbol":        symbol,
+            "type":          int(open_deal.type) if open_deal else int(d.type),
+            "volume":        float(d.volume),
+            "price_open":    float(open_deal.price) if open_deal else float(d.price),
+            "price_close":   float(d.price),
+            "sl":            float(open_order.sl) if open_order else 0.0,
+            "tp":            float(open_order.tp) if open_order else 0.0,
+            "profit":        float(d.profit),
+            "commission":    float(d.commission),
+            "swap":          float(d.swap),
+            "time":          int(d.time),
+            "close_time":    int(d.time),
+            "open_time":     int(open_deal.time) if open_deal else int(d.time),
+            "close_time_label": datetime.fromtimestamp(d.time).strftime("%Y.%m.%d %H:%M:%S"),
+            "open_time_label":  datetime.fromtimestamp(open_deal.time if open_deal else d.time).strftime("%Y.%m.%d %H:%M:%S"),
+            "magic":         int(d.magic),
+            "opening_magic": int(open_deal.magic) if open_deal else int(d.magic),
         })
 
     per_sym = {}
@@ -220,6 +231,44 @@ def get_history_with_orders(days: int = 365) -> list:
     #       f"(skipped {skipped_no_symbol} empty-symbol) | {per_sym}")
 
     return sorted(result, key=lambda x: x["time"], reverse=True)
+
+
+def get_history_entries(days: int = 365) -> list:
+    """Returns raw MT5 history entries so the dashboard can mirror MT5's History tab."""
+    if not ensure_connected():
+        return []
+
+    to_date   = datetime.now() + timedelta(hours=3)
+    from_date = to_date - timedelta(days=days)
+    deals = mt5.history_deals_get(from_date, to_date)
+    if deals is None:
+        code, msg = mt5.last_error()
+        print(f"[MT5] history_deals_get entries failed code={code}: {msg}")
+        return []
+
+    entries = []
+    for d in deals:
+        if not d.symbol:
+            continue
+
+        entries.append({
+            "ticket":       int(d.order or d.ticket),
+            "deal_ticket":  int(d.ticket),
+            "order":        int(d.order),
+            "position_id":  int(d.position_id),
+            "symbol":       d.symbol.strip(),
+            "type":         int(d.type),
+            "entry":        int(d.entry),
+            "volume":       float(d.volume),
+            "price":        float(d.price),
+            "profit":       float(d.profit),
+            "time":         int(d.time),
+            "time_label":   datetime.fromtimestamp(d.time).strftime("%Y.%m.%d %H:%M:%S"),
+            "comment":      d.comment,
+            "magic":        int(d.magic),
+        })
+
+    return sorted(entries, key=lambda x: x["time"], reverse=True)
 
 
 # ── Multi-account snapshot ────────────────────────────────────────────────────

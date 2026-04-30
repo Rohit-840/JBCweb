@@ -5,6 +5,8 @@ const normalise = (raw) => raw.trim().replace(/\s+/g, "").toLowerCase();
 
 // Valid normalised symbol: letters, digits, dots only, 1-20 chars
 const isValid = (sym) => /^[a-z0-9.]{1,20}$/.test(sym);
+const normaliseTimeframe = (raw) => raw.trim().replace(/\s+/g, "").toUpperCase();
+const isValidTimeframe = (tf) => /^(M[1-9][0-9]*|H[1-9][0-9]*|D1|W1|MN1|RENKO)$/i.test(tf);
 
 // ── GET /api/strategies ───────────────────────────────────────────────────────
 export const getStrategies = async (req, res) => {
@@ -15,7 +17,11 @@ export const getStrategies = async (req, res) => {
     const customizations = {};
     if (user.strategyCustomizations) {
       for (const [key, val] of user.strategyCustomizations.entries()) {
-        customizations[key] = { added: val.added, removed: val.removed };
+        customizations[key] = {
+          added:       val.added || [],
+          removed:     val.removed || [],
+          expertRules: val.expertRules || [],
+        };
       }
     }
 
@@ -30,6 +36,8 @@ export const addSymbol = async (req, res) => {
   try {
     const { strategy } = req.params;
     const raw = req.body.symbol;
+    const rawMagic = req.body.magic;
+    const rawTimeframe = req.body.timeframe;
 
     if (!raw || typeof raw !== "string") {
       return res.status(400).json({ message: "Symbol is required" });
@@ -49,7 +57,8 @@ export const addSymbol = async (req, res) => {
       user.strategyCustomizations = new Map();
     }
 
-    const entry = user.strategyCustomizations.get(strategy) || { added: [], removed: [] };
+    const entry = user.strategyCustomizations.get(strategy) || { added: [], removed: [], expertRules: [] };
+    if (!entry.expertRules) entry.expertRules = [];
 
     // If previously removed → undo the removal instead of adding to `added`
     const removedIdx = entry.removed.findIndex((s) => s === symbol);
@@ -63,10 +72,32 @@ export const addSymbol = async (req, res) => {
 
     // Idempotent: skip if already present
     if (entry.added.includes(symbol)) {
-      return res.json({ message: "Symbol already exists", symbol });
+      if (rawMagic === undefined || rawMagic === null || rawMagic === "") {
+        return res.json({ message: "Symbol already exists", symbol });
+      }
+    } else {
+      entry.added.push(symbol);
     }
 
-    entry.added.push(symbol);
+    if (rawMagic !== undefined && rawMagic !== null && rawMagic !== "") {
+      const magic = Number(rawMagic);
+      const timeframe = typeof rawTimeframe === "string" ? normaliseTimeframe(rawTimeframe) : "";
+
+      if (!Number.isInteger(magic) || magic < 0) {
+        return res.status(400).json({ message: "Expert ID must be a positive whole number." });
+      }
+      if (!timeframe || !isValidTimeframe(timeframe)) {
+        return res.status(400).json({ message: "Timeframe is required for Expert ID. Use M1, M5, M15, H1, H4, D1, RENKO, etc." });
+      }
+
+      const duplicate = entry.expertRules.some(
+        (rule) => rule.symbol === symbol && Number(rule.magic) === magic
+      );
+      if (!duplicate) {
+        entry.expertRules.push({ symbol, magic, timeframe });
+      }
+    }
+
     user.strategyCustomizations.set(strategy, entry);
     user.markModified("strategyCustomizations");
     await user.save();
@@ -104,7 +135,7 @@ export const removeSymbol = async (req, res) => {
       user.strategyCustomizations = new Map();
     }
 
-    const entry = user.strategyCustomizations.get(strategy) || { added: [], removed: [] };
+    const entry = user.strategyCustomizations.get(strategy) || { added: [], removed: [], expertRules: [] };
 
     // Remove from added list if it was a custom symbol
     const addedIdx = entry.added.findIndex((s) => s === symbol);
@@ -116,6 +147,8 @@ export const removeSymbol = async (req, res) => {
         entry.removed.push(symbol);
       }
     }
+
+    entry.expertRules = (entry.expertRules || []).filter((rule) => rule.symbol !== symbol);
 
     user.strategyCustomizations.set(strategy, entry);
     user.markModified("strategyCustomizations");

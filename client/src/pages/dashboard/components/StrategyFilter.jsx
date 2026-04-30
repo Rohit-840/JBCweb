@@ -1,6 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { STRATEGY_CONFIG, STRATEGIES, applyTPSLFilter } from "../constants.js";
-import { normaliseSymbol, isValidSymbol } from "../utils/symbolUtils.js";
+import {
+  normaliseSymbol,
+  isValidSymbol,
+  normaliseTimeframe,
+  isValidTimeframe,
+  findExpertRuleForTrade,
+  matchesStrategyRule,
+} from "../utils/symbolUtils.js";
 import SymbolChart      from "./SymbolChart.jsx";
 import AddSymbolInput   from "./AddSymbolInput.jsx";
 import InteractiveChart from "./InteractiveChart.jsx";
@@ -23,6 +30,10 @@ function fmtTime(ts) {
     year: "2-digit", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", hour12: false,
   });
+}
+
+function mt5Time(item) {
+  return item.open_time_label || fmtTime(item.open_time || item.time);
 }
 
 function calcStats(history) {
@@ -185,11 +196,11 @@ function SuggestInput({
 }
 
 /* volume filter panel (right side, above chart) */
-function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
+function VolumeFilter({ symbolHistory, symbolTrades = [], symbolHistoryEntries = [], volumeFilter, setVolumeFilter }) {
   const availableVolumes = useMemo(() => {
-    const set = new Set(symbolHistory.map((h) => h.volume));
+    const set = new Set([...symbolHistory, ...symbolTrades, ...symbolHistoryEntries].map((h) => h.volume));
     return [...set].sort((a, b) => a - b);
-  }, [symbolHistory]);
+  }, [symbolHistory, symbolTrades, symbolHistoryEntries]);
 
   const activeVol = volumeFilter.trim() !== "" ? parseFloat(volumeFilter) : null;
 
@@ -250,40 +261,59 @@ function VolumeFilter({ symbolHistory, volumeFilter, setVolumeFilter }) {
 /* ── Edit Strategies Modal ───────────────────────────────────────────────── */
 function EditModal({
   strategies, onAddSymbol, onRemoveSymbol, onDeleteStrategy,
-  symbolLoading, suggestions, openSymbols, onClose,
+  symbolLoading, suggestions, openSymbols, expertRules = {}, onClose,
 }) {
   const [addInputs, setAddInputs] = useState({});
+  const [expertInputs, setExpertInputs] = useState({});
   const [addErrors, setAddErrors] = useState({});
   const [newName,   setNewName]   = useState("");
   const [newSymbol, setNewSymbol] = useState("");
+  const [newMagic,  setNewMagic]  = useState("");
+  const [newTimeframe, setNewTimeframe] = useState("");
   const [newError,  setNewError]  = useState("");
   const [creating,  setCreating]  = useState(false);
 
   const isStatic = (name) => name in STRATEGIES;
+  const rulesFor = (strategyName, symbol) =>
+    (expertRules[strategyName] || []).filter((rule) => rule.symbol === symbol.toLowerCase());
 
   const handleAddSymbol = async (strategyName, symOverride) => {
     const raw = symOverride || (addInputs[strategyName] || "").trim();
     const sym = normaliseSymbol(raw);
+    const expert = expertInputs[strategyName] || {};
+    const magicRaw = String(expert.magic || "").trim();
+    const timeframe = normaliseTimeframe(expert.timeframe || "");
     if (!sym) return setAddErrors((p) => ({ ...p, [strategyName]: "Enter a symbol." }));
     if (!isValidSymbol(sym)) return setAddErrors((p) => ({ ...p, [strategyName]: "Letters, digits, dots only." }));
+    if (magicRaw && !/^\d+$/.test(magicRaw)) return setAddErrors((p) => ({ ...p, [strategyName]: "Expert ID must be a whole number." }));
+    if (magicRaw && !isValidTimeframe(timeframe)) {
+      return setAddErrors((p) => ({ ...p, [strategyName]: "Enter timeframe for this Expert ID, e.g. M5, M15, H1, RENKO." }));
+    }
     setAddErrors((p) => ({ ...p, [strategyName]: "" }));
-    await onAddSymbol(strategyName, sym);
+    await onAddSymbol(strategyName, sym, magicRaw ? { magic: Number(magicRaw), timeframe } : {});
     setAddInputs((p) => ({ ...p, [strategyName]: "" }));
+    setExpertInputs((p) => ({ ...p, [strategyName]: { magic: "", timeframe: "" } }));
   };
 
   const handleCreate = async () => {
     const name = newName.trim().toUpperCase().replace(/\s+/g, "_");
     const sym  = normaliseSymbol(newSymbol);
+    const magicRaw = newMagic.trim();
+    const timeframe = normaliseTimeframe(newTimeframe);
     if (!name)              return setNewError("Enter a strategy name.");
     if (!sym)               return setNewError("Enter at least one symbol.");
     if (!isValidSymbol(sym)) return setNewError("Symbol: letters, digits, dots only.");
     if (name in strategies)  return setNewError("Strategy name already exists.");
+    if (magicRaw && !/^\d+$/.test(magicRaw)) return setNewError("Expert ID must be a whole number.");
+    if (magicRaw && !isValidTimeframe(timeframe)) return setNewError("Enter timeframe for this Expert ID, e.g. M5, M15, H1, RENKO.");
     setNewError("");
     setCreating(true);
-    await onAddSymbol(name, sym);
+    await onAddSymbol(name, sym, magicRaw ? { magic: Number(magicRaw), timeframe } : {});
     setCreating(false);
     setNewName("");
     setNewSymbol("");
+    setNewMagic("");
+    setNewTimeframe("");
   };
 
   const handleDelete = async (name) => {
@@ -355,11 +385,20 @@ function EditModal({
                 ) : symbols.map((sym) => (
                   <span
                     key={sym}
-                    className="group flex items-center gap-1 px-2.5 py-1 rounded-lg
+                    className="group flex items-center gap-1.5 px-2.5 py-1 rounded-lg
                       bg-white/5 border border-white/10 text-xs text-gray-300
                       hover:border-red-500/30 transition-all"
                   >
                     {sym}
+                    {rulesFor(name, sym).map((rule) => (
+                      <span
+                        key={`${rule.symbol}-${rule.magic}-${rule.volume ?? ""}`}
+                        className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20
+                          text-[9px] font-bold text-emerald-400"
+                      >
+                        {[rule.volume != null && `${rule.volume}L`, rule.magic != null && `ID ${rule.magic}${rule.timeframe ? ` / ${rule.timeframe}` : ""}`].filter(Boolean).join(" · ")}
+                      </span>
+                    ))}
                     <button
                       onClick={() => onRemoveSymbol(name, sym)}
                       className="text-gray-600 hover:text-red-400 transition-colors leading-none text-sm ml-0.5"
@@ -371,7 +410,7 @@ function EditModal({
               </div>
 
               {/* Add symbol input with suggestions */}
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_90px_90px_auto] gap-2">
                 <SuggestInput
                   value={addInputs[name] || ""}
                   onChange={(v) => {
@@ -384,6 +423,29 @@ function EditModal({
                   openSymbols={openSymbols}
                   disabled={symbolLoading}
                   placeholder="Add symbol (e.g. gbpjpy)"
+                  className={inputCls}
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={expertInputs[name]?.magic || ""}
+                  onChange={(e) => {
+                    setExpertInputs((p) => ({ ...p, [name]: { ...(p[name] || {}), magic: e.target.value } }));
+                    setAddErrors((p) => ({ ...p, [name]: "" }));
+                  }}
+                  disabled={symbolLoading}
+                  placeholder="Expert ID"
+                  className={inputCls}
+                />
+                <input
+                  type="text"
+                  value={expertInputs[name]?.timeframe || ""}
+                  onChange={(e) => {
+                    setExpertInputs((p) => ({ ...p, [name]: { ...(p[name] || {}), timeframe: e.target.value } }));
+                    setAddErrors((p) => ({ ...p, [name]: "" }));
+                  }}
+                  disabled={symbolLoading}
+                  placeholder="TF"
                   className={inputCls}
                 />
                 <button
@@ -406,13 +468,13 @@ function EditModal({
           {/* New strategy creator */}
           <div className="rounded-xl border border-dashed border-white/10 p-4">
             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Create New Strategy</p>
-            <div className="flex flex-col sm:flex-row gap-2 mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_90px_90px_auto] gap-2 mb-2">
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => { setNewName(e.target.value); setNewError(""); }}
                 placeholder="Strategy name (e.g. NOVA)"
-                className={inputClsLg + " flex-1"}
+                className={inputClsLg}
               />
               {/* Symbol input with suggestions (fill-only, no auto-submit) */}
               <SuggestInput
@@ -423,6 +485,21 @@ function EditModal({
                 openSymbols={openSymbols}
                 placeholder="First symbol (e.g. eurusd)"
                 className={inputClsLg + " w-full"}
+              />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={newMagic}
+                onChange={(e) => { setNewMagic(e.target.value); setNewError(""); }}
+                placeholder="Expert ID"
+                className={inputClsLg}
+              />
+              <input
+                type="text"
+                value={newTimeframe}
+                onChange={(e) => { setNewTimeframe(e.target.value); setNewError(""); }}
+                placeholder="TF"
+                className={inputClsLg}
               />
               <button
                 onClick={handleCreate}
@@ -447,6 +524,7 @@ function EditModal({
 export default function StrategyFilter({
   data,
   strategies = {},
+  expertRules = {},
   activeStrategy,
   onStrategyChange,
   onAddSymbol,
@@ -520,11 +598,11 @@ export default function StrategyFilter({
     return () => window.removeEventListener("keydown", onKey);
   }, [popup, interactiveChartOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const closePopup = () => {
+  function closePopup() {
     if (!popup) return;
     setPopup(null);
     window.history.back();
-  };
+  }
 
   useEffect(() => { setPopupVolume(""); }, [popup]);
 
@@ -545,23 +623,38 @@ export default function StrategyFilter({
     closePopup();
   };
 
+  const activeExpertRules = useMemo(
+    () => activeStrategy ? expertRules[activeStrategy] || [] : [],
+    [activeStrategy, expertRules]
+  );
+
   const symbolHistory = useMemo(() => {
     if (!popup) return [];
     const upper = popup.toUpperCase();
     const bySymbol = (data?.full_history || []).filter(
-      (h) => h.symbol?.trim().toUpperCase() === upper
+      (h) => matchesStrategyRule(h, activeStrategy, [upper], expertRules)
     );
     return applyTPSLFilter(bySymbol, activeStrategy);
-  }, [popup, activeStrategy, data?.full_history]);
+  }, [popup, activeStrategy, expertRules, data?.full_history]);
 
   const symbolTrades = useMemo(
-    () => popup
-      ? (data?.trades || []).filter(
-          (t) => t.symbol?.trim().toUpperCase() === popup.toUpperCase()
-        )
-      : [],
-    [popup, data?.trades]
+    () => {
+      if (!popup) return [];
+      const upper = popup.toUpperCase();
+      return (data?.trades || []).filter(
+        (t) => matchesStrategyRule(t, activeStrategy, [upper], expertRules)
+      );
+    },
+    [popup, activeStrategy, expertRules, data?.trades]
   );
+
+  const symbolHistoryEntries = useMemo(() => {
+    if (!popup) return [];
+    const upper = popup.toUpperCase();
+    return (data?.history_entries || []).filter(
+      (h) => matchesStrategyRule(h, activeStrategy, [upper], expertRules)
+    );
+  }, [popup, activeStrategy, expertRules, data?.history_entries]);
 
   const displayHistory = useMemo(() => {
     const raw = popupVolume.trim();
@@ -571,8 +664,31 @@ export default function StrategyFilter({
     return symbolHistory.filter((h) => Math.abs(h.volume - vol) < 0.0001);
   }, [symbolHistory, popupVolume]);
 
-  const isFiltered = displayHistory.length !== symbolHistory.length;
+  const displayTrades = useMemo(() => {
+    const raw = popupVolume.trim();
+    if (!raw) return symbolTrades;
+    const vol = parseFloat(raw);
+    if (isNaN(vol)) return symbolTrades;
+    return symbolTrades.filter((t) => Math.abs(t.volume - vol) < 0.0001);
+  }, [symbolTrades, popupVolume]);
+
+  const displayHistoryEntries = useMemo(() => {
+    const raw = popupVolume.trim();
+    if (!raw) return symbolHistoryEntries;
+    const vol = parseFloat(raw);
+    if (isNaN(vol)) return symbolHistoryEntries;
+    return symbolHistoryEntries.filter((h) => Math.abs(h.volume - vol) < 0.0001);
+  }, [symbolHistoryEntries, popupVolume]);
+
+  const isFiltered =
+    displayHistory.length !== symbolHistory.length
+    || displayHistoryEntries.length !== symbolHistoryEntries.length;
   const stats      = useMemo(() => calcStats(displayHistory), [displayHistory]);
+  const openPnl    = useMemo(
+    () => displayTrades.reduce((sum, t) => sum + (t.profit || 0), 0),
+    [displayTrades]
+  );
+  const activeTimeframes = [...new Set(activeExpertRules.map((rule) => rule.timeframe))];
 
   return (
     <>
@@ -587,6 +703,11 @@ export default function StrategyFilter({
                 ? `${activeStrategy}: ${(strategies[activeStrategy] || []).join(", ")}`
                 : "Choose your Strategy"}
             </p>
+            {activeStrategy === "TITAN" && activeTimeframes.length > 0 && (
+              <p className="text-[10px] text-emerald-400/80 font-semibold tracking-wide mt-1">
+                RENKO / TITAN TF: {activeTimeframes.join(", ")}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -630,37 +751,38 @@ export default function StrategyFilter({
 
         {activeStrategy && (
           <div className="mt-3 pt-3 border-t border-white/5 space-y-2.5">
-            {/* Symbol chips */}
+            {/* Symbol chips — green = pre-configured, red = user-added from UI */}
             <div className="flex gap-2 flex-wrap">
               {(strategies[activeStrategy] || []).map((sym) => {
-                const cfg = STRATEGY_CONFIG[activeStrategy]?.[sym];
+                const isStaticSym = (STRATEGIES[activeStrategy] || []).some(
+                  (s) => s.toUpperCase() === sym.toUpperCase()
+                );
                 return (
                   <span
                     key={sym}
-                    className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                      bg-white/5 border border-white/10 text-xs text-gray-300
-                      hover:border-yellow-500/30 hover:text-yellow-400 transition-all"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setPopup(sym)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setPopup(sym);
+                      }
+                    }}
+                    className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                      border text-xs font-semibold tracking-wide transition-all cursor-pointer select-none ${
+                      isStaticSym
+                        ? "bg-green-500/10 border-green-500/30 text-green-400 hover:border-green-500/50 hover:text-green-300"
+                        : "bg-red-500/10 border-red-500/30 text-red-400 hover:border-red-500/50 hover:text-red-300"
+                    }`}
                   >
-                    <button
-                      onClick={() => setPopup(sym)}
-                      className="flex items-center gap-1.5"
-                    >
-                      <span>{sym}</span>
-                      {cfg && (
-                        <span className="flex items-center gap-1">
-                          <span className="px-1.5 py-0.5 rounded bg-green-500/15 border border-green-500/30 text-green-400 text-[9px] font-bold">
-                            {typeof cfg.tp === "object" ? `TP $${cfg.tp.min}-$${cfg.tp.max}` : `TP $${cfg.tp}`}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-[9px] font-bold">
-                            {typeof cfg.sl === "object" ? `SL $${cfg.sl.min}-$${cfg.sl.max}` : `SL $${cfg.sl}`}
-                          </span>
-                        </span>
-                      )}
-                    </button>
+                    <span>
+                      {sym.toUpperCase()}
+                    </span>
                     <button
                       onClick={(e) => { e.stopPropagation(); onRemoveSymbol?.(activeStrategy, sym); }}
                       title={`Remove ${sym} from ${activeStrategy}`}
-                      className="opacity-0 group-hover:opacity-100 ml-0.5 text-gray-600
+                      className="opacity-0 group-hover:opacity-100 ml-0.5 text-gray-500
                         hover:text-red-400 transition-all leading-none text-sm"
                     >
                       ×
@@ -681,9 +803,10 @@ export default function StrategyFilter({
 
             {availableVolumes.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[9px] text-gray-600 uppercase tracking-widest shrink-0">
-                  Vol Filter
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[9px] text-gray-600 uppercase tracking-widest">Vol Filter</span>
+                  
+                </div>
                 {availableVolumes.map((vol) => {
                   const selIdx = volumeFilter.findIndex((v) => Math.abs(v - vol) < 0.0001);
                   const selected = selIdx !== -1;
@@ -765,7 +888,7 @@ export default function StrategyFilter({
                   {isFiltered && (
                     <span className="text-[10px] px-2.5 py-1 rounded-full bg-yellow-500/10
                       border border-yellow-500/30 text-yellow-400 font-semibold tracking-wide">
-                      Vol {popupVolume} · {displayHistory.length}/{symbolHistory.length} trades
+                      Vol {popupVolume} | {displayHistoryEntries.length}/{symbolHistoryEntries.length} 
                     </span>
                   )}
                 </div>
@@ -778,21 +901,21 @@ export default function StrategyFilter({
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 md:px-6 py-4 border-b border-white/5 shrink-0">
-                <StatCard label="Total Trades" value={stats.total} />
+                <StatCard label="MT5 History Rows" value={displayHistoryEntries.length} />
                 <StatCard
-                  label="Average RR"
-                  value={stats.avgRR === "—" ? "—" : `${stats.avgRR}:1`}
+                  label="Closed Trades"
+                  value={stats.total}
                   color="text-yellow-400"
                 />
                 <StatCard
-                  label="Total PNL"
+                  label="Closed PNL"
                   value={`${stats.totalPnl >= 0 ? "+" : ""}$${stats.totalPnl.toFixed(2)}`}
                   color={stats.totalPnl >= 0 ? "text-green-400" : "text-red-400"}
                 />
                 <StatCard
-                  label="Max Drawdown"
-                  value={stats.maxDD > 0 ? `-$${stats.maxDD.toFixed(2)}` : "$0"}
-                  color="text-red-400"
+                  label="Floating PNL"
+                  value={`${openPnl >= 0 ? "+" : ""}$${openPnl.toFixed(2)}`}
+                  color={openPnl >= 0 ? "text-green-400" : "text-red-400"}
                 />
               </div>
 
@@ -802,11 +925,11 @@ export default function StrategyFilter({
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-[#0d0d0d] z-10">
                       <tr className="border-b border-white/5">
-                        {["Ticket", "Time", "Type", "Volume", "Profit"].map((h, i) => (
+                        {["MT5 Ticket", "Time", "TF", "Type", "Volume", "Profit/Loss"].map((h, i) => (
                           <th
                             key={h}
                             className={`px-4 py-3 text-[10px] tracking-widest text-gray-600
-                              uppercase font-medium ${i >= 4 ? "text-right" : "text-left"}`}
+                              uppercase font-medium ${i >= 5 ? "text-right" : "text-left"}`}
                           >
                             {h}
                           </th>
@@ -814,37 +937,45 @@ export default function StrategyFilter({
                       </tr>
                     </thead>
                     <tbody>
-                      {displayHistory.length === 0 ? (
+                      {displayHistoryEntries.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-10 text-center text-gray-700">
+                          <td colSpan={6} className="px-4 py-10 text-center text-gray-700">
                             {isFiltered
-                              ? `No trades with volume ${volumeFilter} for ${popup}`
-                              : `No history for ${popup}`}
+                              ? `No MT5 history rows with volume ${popupVolume} for ${popup}`
+                              : `No MT5 history rows for ${popup}`}
                           </td>
                         </tr>
                       ) : (
-                        displayHistory.map((h, i) => (
-                          <tr
-                            key={`${h.ticket}-${i}`}
-                            className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors duration-100"
-                          >
-                            <td className="px-4 py-2.5 text-gray-500 font-mono">{h.ticket}</td>
-                            <td className="px-4 py-2.5 text-gray-400 font-mono whitespace-nowrap">
-                              {fmtTime(h.time)}
-                            </td>
-                            <td className="px-4 py-2.5"><TypeBadge type={h.type} /></td>
-                            <td className={`px-4 py-2.5 font-semibold ${
-                              isFiltered ? "text-yellow-400" : "text-gray-300"
-                            }`}>
-                              {h.volume}
-                            </td>
-                            <td className={`px-4 py-2.5 text-right font-semibold ${
-                              h.profit >= 0 ? "text-green-400" : "text-red-400"
-                            }`}>
-                              {h.profit >= 0 ? "+" : ""}${h.profit.toFixed(2)}
-                            </td>
-                          </tr>
-                        ))
+                        displayHistoryEntries.map((h, i) => {
+                          const tf = findExpertRuleForTrade(h, activeExpertRules)?.timeframe || "—";
+                          return (
+                            <tr
+                              key={`${h.ticket}-${i}`}
+                              className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors duration-100"
+                            >
+                              <td className="px-4 py-2.5 text-gray-500 font-mono">{h.ticket}</td>
+                              <td className="px-4 py-2.5 text-gray-400 font-mono whitespace-nowrap">
+                                {h.time_label || mt5Time(h)}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold text-emerald-400">
+                                  {tf}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5"><TypeBadge type={h.type} /></td>
+                              <td className={`px-4 py-2.5 font-semibold ${
+                                isFiltered ? "text-yellow-400" : "text-gray-300"
+                              }`}>
+                                {h.volume}
+                              </td>
+                              <td className={`px-4 py-2.5 text-right font-semibold ${
+                                h.profit >= 0 ? "text-green-400" : "text-red-400"
+                              }`}>
+                                {h.profit >= 0 ? "+" : ""}${Number(h.profit || 0).toFixed(2)}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -854,6 +985,8 @@ export default function StrategyFilter({
 
                   <VolumeFilter
                     symbolHistory={symbolHistory}
+                    symbolTrades={symbolTrades}
+                    symbolHistoryEntries={symbolHistoryEntries}
                     volumeFilter={popupVolume}
                     setVolumeFilter={setPopupVolume}
                   />
@@ -876,50 +1009,51 @@ export default function StrategyFilter({
                   </div>
 
                   <div className="p-4 shrink-0">
-                    <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest mb-0.5">
-                      Cumulative P/L
-                    </p>
-                    <p className="text-white text-xs font-semibold mb-3">
-                      {popup} Performance
-                      {isFiltered && (
-                        <span className="text-yellow-400/70 font-normal ml-1">
-                          · vol {popupVolume}
-                        </span>
-                      )}
-                    </p>
+                    
+                        <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest mb-0.5">
+                          Cumulative P/L
+                        </p>
+                        <p className="text-white text-xs font-semibold mb-3">
+                          {popup} Performance
+                          {isFiltered && (
+                            <span className="text-yellow-400/70 font-normal ml-1"> · vol {popupVolume} </span>
+                          )}
+                        </p>
 
-                    <div
-                      key={`${popup}-${popupVolume}`}
-                      className="transition-opacity duration-300 relative group cursor-pointer"
-                      onClick={() => setInteractiveChartOpen(true)}
-                    >
-                      <SymbolChart
+                        <div
+                          key={`${popup}-${popupVolume}`}
+                          className="transition-opacity duration-300 relative group cursor-pointer"
+                          onClick={() => setInteractiveChartOpen(true)}
+                        >
+                           <SymbolChart
                         history={displayHistory}
-                        trades={symbolTrades}
+                        trades={displayTrades}
                         height={220}
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                         <span className="bg-black/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-white backdrop-blur-sm border border-white/10 flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-                          Expand Graph
-                        </span>
-                      </div>
-                    </div>
+                              Expand Graph
+                            </span>
+                          </div>
+                        </div>
+                      
                   </div>
 
-                  {symbolTrades.length > 0 && (
+                  {displayTrades.length > 0 && (
                     <div className="px-4 pb-4 border-t border-white/5 pt-3 shrink-0">
                       <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest mb-2">
-                        Open Positions ({symbolTrades.length})
+                        Open Positions ({displayTrades.length})
                       </p>
                       <div className="space-y-1.5">
-                        {symbolTrades.map((t) => (
+                        {displayTrades.map((t) => (
                           <div
                             key={t.ticket}
                             className="flex items-center justify-between bg-white/[0.03]
                               rounded-lg px-3 py-2 text-xs border border-white/5"
                           >
                             <TypeBadge type={t.type} />
+                            <span className="text-gray-500 font-mono">{t.ticket}</span>
                             <span className="text-gray-400">{t.volume} lots</span>
                             <span className={`font-semibold ${
                               t.profit >= 0 ? "text-green-400" : "text-red-400"
@@ -947,6 +1081,7 @@ export default function StrategyFilter({
           symbolLoading={symbolLoading}
           suggestions={candidateSymbols}
           openSymbols={openTradeSymbolsSet}
+          expertRules={expertRules}
           onClose={() => setEditOpen(false)}
         />
       )}
@@ -976,7 +1111,7 @@ export default function StrategyFilter({
             <div className="flex-1 p-2 md:p-4 min-h-0">
               <InteractiveChart
                 history={displayHistory}
-                trades={symbolTrades}
+                trades={displayTrades}
                 title={`${popup} Performance`}
               />
             </div>

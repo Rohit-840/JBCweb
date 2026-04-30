@@ -12,6 +12,12 @@ const mt5Schema = new mongoose.Schema({
   server: String,
 });
 
+const expertRuleSchema = new mongoose.Schema({
+  symbol:    { type: String, required: true },
+  magic:     { type: Number, required: true },
+  timeframe: { type: String, required: true },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -29,8 +35,9 @@ const userSchema = new mongoose.Schema({
   strategyCustomizations: {
     type: Map,
     of: new mongoose.Schema({
-      added:   { type: [String], default: [] },
-      removed: { type: [String], default: [] },
+      added:       { type: [String], default: [] },
+      removed:     { type: [String], default: [] },
+      expertRules: { type: [expertRuleSchema], default: [] },
     }, { _id: false }),
     default: () => new Map(),
   },
