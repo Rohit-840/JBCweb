@@ -11,7 +11,6 @@ import {
 import SymbolChart      from "./SymbolChart.jsx";
 import AddSymbolInput   from "./AddSymbolInput.jsx";
 import InteractiveChart from "./InteractiveChart.jsx";
-
 /* helpers */
 function TypeBadge({ type }) {
   const isBuy = type === 0;
@@ -23,7 +22,6 @@ function TypeBadge({ type }) {
     </span>
   );
 }
-
 function fmtTime(ts) {
   if (!ts) return "—";
   return new Date(ts * 1000).toLocaleString("en-GB", {
