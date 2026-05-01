@@ -30,11 +30,17 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
   const svgRef  = useRef(null);
   const [width, setWidth] = useState(400);
   const [hover, setHover] = useState(null);
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
 
   useEffect(() => {
     const obs = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
     if (wrapRef.current) obs.observe(wrapRef.current);
     return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   // Generous padding so labels are never clipped
@@ -50,7 +56,6 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
   const hasHist = histPts.length >= 2;
 
   // ── Open positions stepped projection ─────────────────────────────────────
-  const now           = Math.floor(Date.now() / 1000);
   const lastHistValue = histPts.length > 0 ? histPts[histPts.length - 1].value : 0;
   const lastHistTime  = histPts.length > 0 ? histPts[histPts.length - 1].time  : now - 3600;
   const totalOpenPnl  = trades.reduce((s, t) => s + (t.profit || 0), 0);

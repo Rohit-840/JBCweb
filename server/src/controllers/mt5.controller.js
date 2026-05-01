@@ -1,8 +1,9 @@
 import User from "../models/User.js";
 import axios from "axios";
 import { encrypt, decrypt, isEncrypted } from "../utils/crypto.js";
+import { env } from "../config/env.js";
 
-const PYTHON = process.env.PYTHON_SERVICE_URL || "http://localhost:8001";
+const PYTHON = env.PYTHON_SERVICE_URL;
 
 // ─── List accounts (no passwords exposed) ────────────────────────────────────
 export const getAccounts = async (req, res) => {

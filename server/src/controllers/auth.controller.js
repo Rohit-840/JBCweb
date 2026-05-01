@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 
 
 // 🔐 SIGNUP
@@ -39,7 +40,7 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id },
-      process.env.JWT_SECRET,
+      env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 

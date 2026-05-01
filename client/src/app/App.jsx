@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 
 import Loading         from "../pages/loading/Loading.jsx";
 import Auth            from "../pages/Auth.jsx";
 import ConnectMT5      from "../pages/mt5/ConnectMT5.jsx";
 import AccountSelector from "../pages/accounts/AccountSelector.jsx";
 import Dashboard       from "../pages/dashboard/Dashboard.jsx";
+import api             from "../services/api.js";
 
 function App() {
   const [loading,         setLoading]         = useState(!sessionStorage.getItem("hasSeenLoading"));
@@ -32,8 +32,8 @@ function App() {
     if (loading || !token) return;
 
     setChecking(true);
-    axios
-      .get("/api/mt5/status", {
+    api
+      .get("/mt5/status", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .catch(() => {

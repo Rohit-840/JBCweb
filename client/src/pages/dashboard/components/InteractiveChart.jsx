@@ -1,21 +1,25 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactApexChart from "react-apexcharts";
 
-export default function InteractiveChart({ history = [], trades = [], title = "" }) {
+export default function InteractiveChart({ history = [], trades = [] }) {
   const [userBounds, setUserBounds] = useState(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const { seriesData, maxX, minX } = useMemo(() => {
     try {
       // 1. Build Closed P&L series safely
       const sortedHist = [...(history || [])].sort((a, b) => (a.time || 0) - (b.time || 0));
-      let cum = 0;
-      const closedSeries = sortedHist.map((d) => {
-        cum += d.profit || 0;
-        return [(d.time || 0) * 1000, cum]; // ApexCharts timeline needs ms
-      });
+      const closedSeries = sortedHist.reduce((points, d) => {
+        const previousValue = points.length > 0 ? points[points.length - 1][1] : 0;
+        return [...points, [(d.time || 0) * 1000, previousValue + (d.profit || 0)]];
+      }, []);
 
       // 2. Build Open Positions projection safely
-      const nowMs = Date.now();
       const lastHistValue = closedSeries.length > 0 ? closedSeries[closedSeries.length - 1][1] : 0;
       const lastHistTimeMs = closedSeries.length > 0 ? closedSeries[closedSeries.length - 1][0] : nowMs - 3600000;
 
@@ -98,7 +102,7 @@ export default function InteractiveChart({ history = [], trades = [], title = ""
       console.error("InteractiveChart error:", e);
       return { seriesData: [], maxX: undefined, minX: undefined };
     }
-  }, [history, trades]);
+  }, [history, trades, nowMs]);
 
   const options = {
     chart: {

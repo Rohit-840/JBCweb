@@ -1,16 +1,7 @@
 import { useState, useEffect } from "react";
+import { mt5Post } from "../../../services/mt5Bridge.js";
 
 // Direct call to the Python MT5 bridge (Vite proxies /mt5 → localhost:8001)
-async function pyPost(path, body) {
-  const res  = await fetch(path, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
-  });
-  const data = await res.json();
-  return { ok: res.ok, data };
-}
-
 function TypeBadge({ type }) {
   const isBuy = type === 0;
   return (
@@ -207,13 +198,13 @@ function OpenTradesPanel({ trades, tradeAllowed = true }) {
 
     try {
       if (!isAll) {
-        const { ok, data } = await pyPost("/mt5/close", { ticket: confirm.trade.ticket });
+        const { ok, data } = await mt5Post("/mt5/close", { ticket: confirm.trade.ticket });
         if (!ok || !data.success) {
           setCloseErr(data.error || data.message || "MT5 rejected the close order.");
           return;
         }
       } else {
-        const { ok, data } = await pyPost("/mt5/close-all", { tickets });
+        const { data } = await mt5Post("/mt5/close-all", { tickets });
         if (data.errors?.length) {
           setCloseErr(`${data.errors.length} position(s) failed: ${data.errors[0]?.error || ""}`);
           return;

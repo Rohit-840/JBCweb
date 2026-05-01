@@ -1,0 +1,23 @@
+{
+  "name": "jbcweb",
+  "private": true,
+  "version": "1.0.0",
+  "description": "JB Crownstone trading dashboard with React, Express, and FastAPI MT5 bridge.",
+  "scripts": {
+    "client:dev": "npm --prefix client run dev",
+    "client:build": "npm --prefix client run build",
+    "client:lint": "npm --prefix client run lint",
+    "server:check": "npm --prefix server run check",
+    "server:start": "npm --prefix server start",
+    "python:dev": "python -m uvicorn app.main:app --app-dir python --host 0.0.0.0 --port 8001 --reload",
+    "check:services": "sh scripts/check-services.sh",
+    "check:services:ps": "powershell -ExecutionPolicy Bypass -File scripts/check-services.ps1",
+    "build": "npm --prefix client run build",
+    "lint": "npm --prefix client run lint"
+  },
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10",
+    "python": ">=3.11"
+  }
+}

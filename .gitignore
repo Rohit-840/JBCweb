@@ -1,8 +1,40 @@
 # =========================
-# ROOT / GENERAL
+# OS / EDITOR
 # =========================
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# =========================
+# ENVIRONMENT / SECRETS
+# =========================
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Local certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+
+# =========================
+# LOGS / RUNTIME FILES
+# =========================
 *.log
 logs/
 npm-debug.log*
@@ -10,102 +42,79 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Node
-node_modules/
-dist/
-
-# Python
-__pycache__/
-.venv/
-*.pyc
-
-# Environment secrets
-.env
-
+*.pid
+*.seed
+*.pid.lock
+.pm2/
+pm2.log
+dump.pm2
 
 # =========================
-# ENV FILES / SECRETS
-# =========================
-.env
-.env.*
-!.env.example
-
-# =========================
-# NODE / MERN
+# NODE / FRONTEND / BACKEND
 # =========================
 node_modules/
+**/node_modules/
+
 dist/
 build/
 coverage/
+**/dist/
+**/build/
+**/coverage/
+
 .vite/
+.vite-temp/
+**/.vite/
+**/.vite-temp/
 .cache/
+**/.cache/
+
+# Package-manager local stores
+.npm/
+.pnpm-store/
+.yarn/
+!.yarn/patches/
+!.yarn/plugins/
+!.yarn/releases/
+!.yarn/sdks/
+!.yarn/versions/
 
 # =========================
-# CLIENT (React/Vite)
+# PYTHON
 # =========================
-client/node_modules/
-client/dist/
-client/build/
-client/.env
-client/.vite/
-
-# =========================
-# SERVER (Express)
-# =========================
-server/node_modules/
-server/dist/
-server/build/
-server/.env
-
-# =========================
-# PYTHON / FASTAPI
-# =========================
-python/venv/
-python/.venv/
 venv/
 .venv/
 env/
+python/venv/
+python/.venv/
 
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 *.so
+
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-
-# Python env files
-python/.env
-python/app/.env
+.coverage
+htmlcov/
 
 # =========================
-# DATABASE / LOCAL FILES
+# DATABASE / LOCAL DATA
 # =========================
+*.sqlite
 *.sqlite3
 *.db
+*.db-journal
 
 # =========================
-# IDE / EDITOR
-# =========================
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-!.vscode/tasks.json
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-
-# =========================
-# OS GENERATED
-# =========================
-Desktop.ini
-
-# =========================
-# TEMP / CACHE
+# TEMPORARY FILES
 # =========================
 tmp/
 temp/
 *.tmp
+*.bak
+*.swp
+*.swo

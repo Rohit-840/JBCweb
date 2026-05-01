@@ -3,52 +3,48 @@ import cors from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import mt5Routes from "./routes/mt5.routes.js";
 import strategiesRoutes from "./routes/strategies.routes.js";
+import { allowedCorsOrigins, env } from "./config/env.js";
 
 const app = express();
 
-// ✅ Middleware
+const privateNetworkOrigin = (origin = "") =>
+  /^https?:\/\/192\.168\.\d+\.\d+/.test(origin) ||
+  /^https?:\/\/10\.\d+\.\d+\.\d+/.test(origin) ||
+  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/.test(origin);
+
 app.use(cors({
-  origin: function (origin, callback) {
+  origin(origin, callback) {
     if (!origin) return callback(null, true);
-    
-    // Define your allowed origins
-    const allowedOrigins = [
-      "http://localhost:3000",      // Local React development
-      "http://localhost:5173",      // Local Vite development
-      "http://38.255.35.152:5173",  // New specific IP
-      process.env.FRONTEND_URL      // Your VPS Public IP or Domain Name (from .env)
-    ];
-
-    // Check if the incoming origin is in our allowed list
-    if (allowedOrigins.includes(origin)) {
+    if (allowedCorsOrigins.includes(origin)) return callback(null, true);
+    if (env.NODE_ENV !== "production" && /^https?:\/\/localhost:\d+/.test(origin)) {
+      return callback(null, true);
+    }
+    if (env.ALLOW_PRIVATE_NETWORK_CORS && privateNetworkOrigin(origin)) {
       return callback(null, true);
     }
 
-    // You can keep the local network regex if you test on LAN
-    if (
-      /^https?:\/\/192\.168\.\d+\.\d+/.test(origin) ||
-      /^https?:\/\/10\.\d+\.\d+\.\d+/.test(origin) ||
-      /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/.test(origin) ||
-      /^https?:\/\/\d+\.\d+\.\d+\.\d+/.test(origin)
-    ) {
-      return callback(null, true);
-    }
     console.warn("CORS blocked origin:", origin);
-
-    callback(new Error("Not allowed by CORS"));
+    return callback(new Error("Not allowed by CORS"));
   },
-  credentials: true
+  credentials: true,
 }));
-app.use(express.json());
-app.use("/api/mt5", mt5Routes);
-app.use("/api/strategies", strategiesRoutes);
 
-// ✅ Health check route
+app.use(express.json());
+
 app.get("/", (req, res) => {
-  res.send("API is running...");
+  res.json({ name: "JBC API", status: "ok" });
 });
 
-// ✅ Routes
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
 app.use("/api/auth", authRoutes);
+app.use("/api/mt5", mt5Routes);
+app.use("/api/strategies", strategiesRoutes);
 
 export default app;

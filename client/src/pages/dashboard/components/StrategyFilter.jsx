@@ -1145,7 +1145,6 @@ export default function StrategyFilter({
               <InteractiveChart
                 history={displayHistory}
                 trades={displayTrades}
-                title={`${popup} Performance`}
               />
             </div>
           </div>

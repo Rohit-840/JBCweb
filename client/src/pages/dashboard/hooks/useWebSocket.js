@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 
-const WS_URL = `ws://${window.location.host}/ws/dashboard`;
+function getDashboardWsUrl() {
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/ws/dashboard`;
+}
 
 export default function useWebSocket() {
   const [data, setData] = useState(null);
@@ -11,7 +15,7 @@ export default function useWebSocket() {
 
   useEffect(() => {
     function connect() {
-      const ws = new WebSocket(WS_URL);
+      const ws = new WebSocket(getDashboardWsUrl());
       socketRef.current = ws;
 
       ws.onopen = () => {

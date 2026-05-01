@@ -1,11 +1,12 @@
 import crypto from "crypto";
+import { env } from "../config/env.js";
 
 const ALGO = "aes-256-gcm";
 
 function getKey() {
   return crypto
     .createHash("sha256")
-    .update(process.env.JWT_SECRET)
+    .update(env.JWT_SECRET)
     .digest();
 }
 
