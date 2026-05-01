@@ -49,7 +49,7 @@ export default function Auth({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-black flex items-center justify-center px-4 py-10 relative overflow-y-auto">
+    <div className="min-h-screen min-h-[100dvh] bg-transparent flex items-center justify-center px-4 py-10 relative overflow-y-auto">
 
       {/* Glow Effects */}
       <div className="absolute w-[350px] h-[350px] bg-yellow-500/10 blur-3xl rounded-full top-0 left-0" />

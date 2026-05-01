@@ -68,12 +68,12 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
       `}
     >
       {  /* logo */}
-      <div className="flex flex-col font-bolin items-center pb-2 px-4" style={{ fontFamily: 'bolin gerii' }}>
+      <div className="flex flex-col font-bolin items-center pb-3 px-4 pt-3" style={{ fontFamily: 'bolin gerii' }}>
         <div className="relative w-full flex items-center justify-center">
           <img
             src={logo}
             alt="JB Crownstone"
-            className="w-[180px] h-[180px] p-2 rounded-xl object-contain"
+            className="w-[154px] h-[154px] p-1 rounded-xl object-contain drop-shadow-[0_0_18px_rgba(234,179,8,0.18)]"
             
           />
           <button
@@ -85,7 +85,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
           </button>
         </div>
         <p
-          className="-mt-2 text-[18px] leading-6 font-bold tracking-[0.18em] text-yellow-400/90"
+          className="-mt-1 text-[18px] leading-6 font-bold tracking-[0.18em] text-yellow-400/90"
           style={{ textShadow: '0 0 6px rgba(212,175,55,0.4), 0 0 14px rgba(212,175,55,0.2)' }}
         >CROWNSTONE</p>
         <p className="text-[12px] leading-5 tracking-[0.22em] text-gray-500 uppercase">Private Wealth</p>
@@ -94,14 +94,14 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
       <div className="h-px bg-white/5 mx-4" />
 
       {/* nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 px-3 py-4 space-y-1">
         {NAV.map((item) => {
           const active = page === item.id;
           return (
             <button
               key={item.id}
               onClick={() => setPage(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium
                 transition-all relative
                 ${active
                   ? "bg-yellow-500/10 text-yellow-400"
@@ -123,7 +123,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
         {/* switch account */}
         <button
           onClick={onSwitchAccount}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-yellow-500/15
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-yellow-500/15
             bg-yellow-500/[0.04] text-yellow-500/70 text-[11px] font-semibold tracking-widest
             hover:border-yellow-500/35 hover:text-yellow-400 transition-all duration-200"
         >
@@ -135,7 +135,7 @@ export default function Sidebar({ page, setPage, connected, open, onClose, onSwi
 
         {/* connection status */}
         <div
-          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[11px] font-semibold tracking-widest
+          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-[11px] font-semibold tracking-widest
             ${connected
               ? "border-green-500/30 bg-green-500/5 text-green-400"
               : "border-red-500/20 bg-red-500/5 text-red-500"

@@ -96,7 +96,7 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
     "text-yellow-400";
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-black flex items-center justify-center px-4 py-10 relative overflow-y-auto">
+    <div className="min-h-screen min-h-[100dvh] bg-transparent flex items-center justify-center px-4 py-10 relative overflow-y-auto">
 
       {/* Background glow */}
       <div className="absolute w-[400px] h-[400px] bg-yellow-500/10 blur-3xl rounded-full top-0 left-0 pointer-events-none" />

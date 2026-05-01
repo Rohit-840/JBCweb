@@ -221,7 +221,7 @@ function OpenTradesPanel({ trades, tradeAllowed = true }) {
 
   return (
     <>
-      <div className="bg-[#111] rounded-xl border border-white/5 overflow-hidden flex-1">
+      <div className="dashboard-table-panel bg-[#111] rounded-xl border border-white/5 overflow-hidden flex-1">
         {/* AlgoTrading disabled banner */}
         {!tradeAllowed && (
           <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20">
@@ -262,7 +262,7 @@ function OpenTradesPanel({ trades, tradeAllowed = true }) {
 
         <div className="overflow-y-auto" style={{ maxHeight: 260 }}>
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-[#111]">
+            <thead className="dashboard-table-head sticky top-0 bg-[#111]">
               <tr className="border-b border-white/5">
                 {["Symbol", "Type", "Volume", "Open", "Current", "Profit", ""].map((h, i) => (
                   <th
@@ -347,7 +347,7 @@ function HistoryPanel({ history, resetKey }) {
   const rows       = history.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
   return (
-    <div className="bg-[#111] rounded-xl border border-white/5 overflow-hidden flex-1">
+    <div className="dashboard-table-panel bg-[#111] rounded-xl border border-white/5 overflow-hidden flex-1">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div>
           <p className="text-[10px] tracking-[0.18em] text-yellow-400/60 uppercase mb-0.5">Recent</p>
@@ -377,7 +377,7 @@ function HistoryPanel({ history, resetKey }) {
 
       <div className="overflow-y-auto" style={{ maxHeight: 260 }}>
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-[#111]">
+          <thead className="dashboard-table-head sticky top-0 bg-[#111]">
             <tr className="border-b border-white/5">
               {["Symbol", "Type", "Volume", "Closed", "Profit"].map((h, i) => (
                 <th key={h}

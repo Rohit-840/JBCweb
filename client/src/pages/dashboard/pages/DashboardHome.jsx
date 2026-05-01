@@ -186,14 +186,14 @@ export default function DashboardHome({ data, connected }) {
   }, [activeStrategy]);
 
   return (
-    <div className="p-5 min-h-full">
+    <div className="dashboard-home p-4 sm:p-5 min-h-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-5 flex-wrap">
         <div>
-          <p className="text-[10px] tracking-[0.22em] text-gray-600 uppercase mb-1">
+          <p className="text-[10px] tracking-[0.28em] text-gray-500 uppercase mb-1">
             Crownstone Private Wealth And Investment Management
           </p>
-          <h1 className="text-3xl font-bold text-white tracking-wider">DASHBOARD</h1>
+          <h1 className="text-3xl font-bold text-white tracking-[0.08em]">DASHBOARD</h1>
         </div>
 
         <div className={`flex flex-col items-end px-4 py-2 rounded-xl border text-xs font-bold tracking-widest
@@ -234,7 +234,7 @@ export default function DashboardHome({ data, connected }) {
       />
 
       {/* Equity chart + analytics */}
-      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="dashboard-market-row flex flex-col lg:flex-row gap-4">
         <EquityChart
           equityHistory={data?.equityHistory}
           fullHistory={data?.full_history}

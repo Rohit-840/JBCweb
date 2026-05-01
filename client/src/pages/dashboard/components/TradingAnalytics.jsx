@@ -18,7 +18,7 @@ export default function TradingAnalytics({ analytics, openCount, strategyName })
   const isFiltered = !!strategyName;
 
   return (
-    <div className="bg-[#111] rounded-xl p-4 border border-white/5 w-full lg:w-[272px] lg:shrink-0">
+    <div className="dashboard-analytics-panel bg-[#111] rounded-xl p-4 border border-white/5 w-full lg:w-[272px] lg:shrink-0 lg:self-start">
       <p className="text-[10px] tracking-[0.2em] text-yellow-400/70 uppercase mb-0.5">
         {isFiltered ? strategyName : "Overview"}
       </p>

@@ -7,20 +7,680 @@ html, body, #root {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  min-height: 100dvh; /* dynamic viewport height — respects mobile browser chrome */
+  min-height: 100dvh;
   font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overscroll-behavior: none;  /* prevent pull-to-refresh / bounce */
-  -webkit-overflow-scrolling: touch; /* smooth momentum scroll on iOS */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Lift the dimmest label text so it's actually readable on dark backgrounds */
-.text-gray-600 { color: #71717a !important; }   /* zinc-500 — up from near-invisible */
-.text-gray-700 { color: #52525b !important; }   /* zinc-600 — for empty states */
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #020202;
+  isolation: isolate;
+  overflow: hidden;
+}
 
-/* ── Custom scrollbar ── */
+.app-shell__content {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #050505;
+}
+
+.app-bg--dashboard::before,
+.app-bg--dashboard::after {
+  content: "";
+  position: absolute;
+  inset: auto -8% -16%;
+  z-index: 1;
+  height: 58%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.app-bg--dashboard::before {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 7.5vw, rgba(255, 198, 42, 0.26) 7.55vw 7.62vw, transparent 7.68vw 15vw),
+    repeating-linear-gradient(0deg, transparent 0 34px, rgba(255, 198, 42, 0.18) 35px 36px, transparent 37px 68px);
+  opacity: 0.7;
+  transform: perspective(680px) rotateX(62deg) translateY(18%);
+  transform-origin: bottom center;
+  animation: app-bg-dashboard-floor 7.5s linear infinite;
+}
+
+.app-bg--dashboard::after {
+  background:
+    linear-gradient(100deg, transparent 0 14%, rgba(255, 214, 88, 0.52) 19%, transparent 27% 72%, rgba(255, 214, 88, 0.42) 79%, transparent 88%),
+    linear-gradient(6deg, transparent 0 10%, rgba(255, 188, 28, 0.38) 17%, transparent 29% 70%, rgba(255, 188, 28, 0.35) 82%, transparent 92%);
+  filter: blur(1px);
+  opacity: 0.48;
+  transform: translate3d(-4%, 0, 0);
+  animation: app-bg-dashboard-sweep 5.8s ease-in-out infinite alternate;
+}
+
+.app-bg__image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.96;
+  transform: scale(1.015);
+}
+
+.app-bg--dashboard .app-bg__image {
+  opacity: 1;
+  transform: scale(1.025);
+  animation: app-bg-dashboard-breathe 9s ease-in-out infinite;
+}
+
+.app-bg__motion {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  mix-blend-mode: screen;
+}
+
+.app-bg--dashboard .app-bg__motion::before,
+.app-bg--dashboard .app-bg__motion::after {
+  content: "";
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: 0;
+  height: 38%;
+  background:
+    radial-gradient(ellipse at 18% 82%, rgba(255, 197, 45, 0.34), transparent 34%),
+    radial-gradient(ellipse at 82% 82%, rgba(255, 197, 45, 0.32), transparent 34%);
+  filter: blur(18px);
+  opacity: 0.46;
+  animation: app-bg-dashboard-glow 5.8s ease-in-out infinite;
+}
+
+.app-bg--dashboard .app-bg__motion::after {
+  top: 0;
+  bottom: auto;
+  height: 46%;
+  background:
+    radial-gradient(ellipse at 16% 0%, rgba(255, 197, 45, 0.2), transparent 36%),
+    radial-gradient(ellipse at 84% 0%, rgba(255, 197, 45, 0.2), transparent 36%);
+  animation-delay: -2.4s;
+}
+
+.app-bg__trace {
+  position: absolute;
+  width: var(--w);
+  height: 1px;
+  left: var(--x);
+  top: var(--y);
+  background: linear-gradient(90deg, transparent, rgba(248, 191, 49, 0.32), transparent);
+  box-shadow: 0 0 12px rgba(248, 191, 49, 0.34);
+  opacity: var(--opacity, 0.85);
+  transform: rotate(var(--rotate, 0deg));
+  transform-origin: left center;
+  overflow: hidden;
+}
+
+.app-bg__trace::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 34%;
+  height: 7px;
+  background: linear-gradient(90deg, transparent, rgba(255, 210, 69, 0.2), #fff1a3, rgba(255, 190, 36, 0.96), transparent);
+  filter: blur(0.3px);
+  box-shadow: 0 0 18px rgba(255, 198, 39, 0.95);
+  animation: app-bg-gold-flow var(--duration, 4.8s) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.app-bg__node {
+  position: absolute;
+  width: var(--s, 5px);
+  height: var(--s, 5px);
+  left: var(--x);
+  top: var(--y);
+  border-radius: 999px;
+  background: #ffd34a;
+  box-shadow:
+    0 0 8px rgba(255, 211, 74, 0.98),
+    0 0 24px rgba(255, 190, 36, 0.72),
+    0 0 42px rgba(255, 190, 36, 0.35);
+  animation: app-bg-node-pulse var(--duration, 2.8s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.app-bg__beam {
+  position: absolute;
+  left: var(--x);
+  top: -12%;
+  width: 1px;
+  height: var(--h, 82vh);
+  opacity: 0;
+  background: linear-gradient(180deg, transparent, rgba(255, 221, 129, 0.72), rgba(255, 186, 27, 0.18), transparent);
+  box-shadow: 0 0 16px rgba(255, 198, 39, 0.65);
+  transform: translateY(-28%) scaleY(0.75);
+}
+
+.app-bg__spark {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s, 3px);
+  height: var(--s, 3px);
+  opacity: 0;
+  border-radius: 999px;
+  background: #fff4b8;
+  box-shadow:
+    0 0 8px rgba(255, 242, 168, 0.98),
+    0 0 18px rgba(255, 196, 31, 0.75),
+    0 0 34px rgba(255, 196, 31, 0.34);
+  transform: scale(0.42);
+}
+
+.app-bg--dashboard .app-bg__beam {
+  animation: app-bg-beam-drift var(--duration, 7s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.app-bg--dashboard .app-bg__spark {
+  animation: app-bg-sparkle var(--duration, 3.2s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.app-bg__shade {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.16) 42%, rgba(0, 0, 0, 0.42) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.34));
+}
+
+.app-bg--dashboard .app-bg__shade {
+  background:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0.43) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.26));
+}
+
+.app-shell--dashboard [class~="bg-[#0d0d0d]"],
+.app-shell--dashboard [class~="bg-[#111]"],
+.app-shell--dashboard [class~="bg-[#1a1a1a]"] {
+  background-color: rgba(5, 5, 4, 0.46) !important;
+  border-color: rgba(210, 155, 28, 0.24) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 206, 86, 0.05),
+    0 18px 42px rgba(0, 0, 0, 0.24);
+}
+
+.app-shell--dashboard [class~="bg-[#0a0a0a]"] {
+  background-color: rgba(5, 5, 4, 0.4) !important;
+  border-color: rgba(210, 155, 28, 0.2) !important;
+}
+
+.app-shell--dashboard [class~="bg-white/[0.03]"],
+.app-shell--dashboard [class~="bg-white/[0.04]"],
+.app-shell--dashboard [class~="bg-white/5"] {
+  background-color: rgba(255, 205, 64, 0.035) !important;
+  border-color: rgba(210, 155, 28, 0.16) !important;
+}
+
+.app-shell--dashboard [class~="border-white/5"],
+.app-shell--dashboard [class~="border-white/10"],
+.app-shell--dashboard [class~="border-white/[0.06]"],
+.app-shell--dashboard [class~="border-white/[0.07]"] {
+  border-color: rgba(234, 179, 8, 0.16) !important;
+}
+
+.dashboard-workspace {
+  color: #f7f2df;
+}
+
+.dashboard-main {
+  position: relative;
+  isolation: isolate;
+  scrollbar-gutter: stable;
+}
+
+.dashboard-main::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 210px;
+  z-index: 0;
+  height: 180px;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 197, 45, 0.08), transparent 72%),
+    radial-gradient(ellipse at 74% 0%, rgba(255, 198, 42, 0.14), transparent 42%);
+}
+
+.dashboard-main > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-home {
+  position: relative;
+  max-width: 1720px;
+  margin: 0 auto;
+}
+
+.dashboard-stat-card,
+.dashboard-strategy-panel,
+.dashboard-chart-panel,
+.dashboard-analytics-panel,
+.dashboard-table-panel {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(9, 9, 7, 0.5), rgba(5, 5, 4, 0.4)) !important;
+  border-color: rgba(210, 155, 28, 0.28) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 206, 86, 0.06),
+    0 16px 42px rgba(0, 0, 0, 0.24);
+}
+
+.dashboard-stat-card::before,
+.dashboard-strategy-panel::before,
+.dashboard-chart-panel::before,
+.dashboard-analytics-panel::before,
+.dashboard-table-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(213, 158, 29, 0.05), transparent 34%, transparent 66%, rgba(213, 158, 29, 0.04)),
+    radial-gradient(ellipse at 0% 100%, rgba(255, 188, 28, 0.06), transparent 46%);
+  opacity: 1;
+}
+
+.dashboard-stat-card::after,
+.dashboard-strategy-panel::after,
+.dashboard-chart-panel::after,
+.dashboard-analytics-panel::after,
+.dashboard-table-panel::after {
+  display: none;
+}
+
+.dashboard-stat-card > *,
+.dashboard-strategy-panel > *,
+.dashboard-chart-panel > *,
+.dashboard-analytics-panel > *,
+.dashboard-table-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-chart-panel > .dashboard-panel-ambient {
+  position: absolute;
+  z-index: 0;
+}
+
+.dashboard-stat-card {
+  min-height: 74px;
+}
+
+.dashboard-table-panel {
+  min-height: 0;
+}
+
+.dashboard-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(5, 5, 4, 0.98) !important;
+  box-shadow: 0 1px 0 rgba(210, 155, 28, 0.28);
+}
+
+.dashboard-table-head th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(5, 5, 4, 0.98) !important;
+  box-shadow:
+    inset 0 -1px 0 rgba(210, 155, 28, 0.24),
+    0 12px 18px rgba(0, 0, 0, 0.58);
+}
+
+.dashboard-workspace aside {
+  background:
+    linear-gradient(180deg, rgba(4, 5, 5, 0.62), rgba(8, 8, 6, 0.5)) !important;
+  border-right-color: rgba(215, 165, 35, 0.24) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    16px 0 48px rgba(0, 0, 0, 0.24),
+    inset -1px 0 0 rgba(255, 207, 79, 0.08);
+}
+
+.dashboard-workspace button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 1023px) {
+  .dashboard-main::before {
+    inset: 0 0 auto 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-home {
+    padding-bottom: 24px;
+  }
+
+  .dashboard-stat-card {
+    min-height: 68px;
+  }
+
+}
+
+.app-bg__trace--1 { --x: -6%; --y: 15%; --w: 35vw; --rotate: -43deg; --duration: 4.8s; --delay: -1.4s; }
+.app-bg__trace--2 { --x: 1%; --y: 25%; --w: 26vw; --rotate: -43deg; --duration: 5.4s; --delay: -3.1s; }
+.app-bg__trace--3 { --x: 15%; --y: 7%; --w: 16vw; --rotate: 0deg; --duration: 4.3s; --delay: -2.2s; }
+.app-bg__trace--4 { --x: 66%; --y: 13%; --w: 30vw; --rotate: 0deg; --duration: 5.1s; --delay: -1.1s; }
+.app-bg__trace--5 { --x: 82%; --y: 8%; --w: 26vw; --rotate: 42deg; --duration: 5.7s; --delay: -3.6s; }
+.app-bg__trace--6 { --x: 83%; --y: 30%; --w: 27vw; --rotate: 0deg; --duration: 4.4s; --delay: -0.6s; }
+.app-bg__trace--7 { --x: -2%; --y: 61%; --w: 32vw; --rotate: 0deg; --duration: 5s; --delay: -2.8s; }
+.app-bg__trace--8 { --x: 2%; --y: 73%; --w: 24vw; --rotate: 43deg; --duration: 5.9s; --delay: -4.2s; }
+.app-bg__trace--9 { --x: 22%; --y: 78%; --w: 22vw; --rotate: 0deg; --duration: 4.7s; --delay: -1.9s; }
+.app-bg__trace--10 { --x: 70%; --y: 83%; --w: 28vw; --rotate: 0deg; --duration: 5.2s; --delay: -3.4s; }
+.app-bg__trace--11 { --x: 78%; --y: 96%; --w: 25vw; --rotate: -43deg; --duration: 4.5s; --delay: -2.4s; }
+.app-bg__trace--12 { --x: 88%; --y: 77%; --w: 24vw; --rotate: -43deg; --duration: 5.8s; --delay: -4.8s; }
+.app-bg__trace--13 { --x: 18%; --y: 23%; --w: 20vw; --rotate: 0deg; --duration: 6.1s; --delay: -3.8s; --opacity: 0.55; }
+.app-bg__trace--14 { --x: 70%; --y: 26%; --w: 18vw; --rotate: 0deg; --duration: 5.6s; --delay: -2.6s; --opacity: 0.58; }
+
+.app-bg__node--1 { --x: 8%; --y: 16%; --delay: -0.4s; }
+.app-bg__node--2 { --x: 12%; --y: 22%; --delay: -1.2s; --s: 4px; }
+.app-bg__node--3 { --x: 24%; --y: 7%; --delay: -2.4s; }
+.app-bg__node--4 { --x: 71%; --y: 13%; --delay: -0.9s; --s: 4px; }
+.app-bg__node--5 { --x: 84%; --y: 30%; --delay: -2.1s; }
+.app-bg__node--6 { --x: 3%; --y: 62%; --delay: -3.2s; --s: 6px; }
+.app-bg__node--7 { --x: 21%; --y: 77%; --delay: -1.6s; --s: 4px; }
+.app-bg__node--8 { --x: 34%; --y: 78%; --delay: -2.8s; }
+.app-bg__node--9 { --x: 71%; --y: 82%; --delay: -0.2s; --s: 4px; }
+.app-bg__node--10 { --x: 81%; --y: 90%; --delay: -1.9s; }
+.app-bg__node--11 { --x: 94%; --y: 72%; --delay: -3.6s; --s: 5px; }
+.app-bg__node--12 { --x: 86%; --y: 91%; --delay: -2.7s; --s: 4px; }
+
+.app-bg__beam--1 { --x: 7%; --h: 72vh; --duration: 6.8s; --delay: -1.2s; }
+.app-bg__beam--2 { --x: 15%; --h: 88vh; --duration: 7.6s; --delay: -3.8s; }
+.app-bg__beam--3 { --x: 30%; --h: 62vh; --duration: 6.3s; --delay: -2.1s; }
+.app-bg__beam--4 { --x: 51%; --h: 92vh; --duration: 8.2s; --delay: -5.4s; }
+.app-bg__beam--5 { --x: 68%; --h: 68vh; --duration: 7.1s; --delay: -0.8s; }
+.app-bg__beam--6 { --x: 78%; --h: 78vh; --duration: 6.9s; --delay: -4.5s; }
+.app-bg__beam--7 { --x: 89%; --h: 90vh; --duration: 8.8s; --delay: -2.9s; }
+.app-bg__beam--8 { --x: 96%; --h: 74vh; --duration: 6.5s; --delay: -5.8s; }
+
+.app-bg__spark--1 { --x: 5%; --y: 18%; --s: 3px; --duration: 2.8s; --delay: -0.4s; }
+.app-bg__spark--2 { --x: 11%; --y: 31%; --s: 2px; --duration: 3.4s; --delay: -1.7s; }
+.app-bg__spark--3 { --x: 18%; --y: 12%; --s: 4px; --duration: 3.1s; --delay: -2.3s; }
+.app-bg__spark--4 { --x: 24%; --y: 72%; --s: 2px; --duration: 2.7s; --delay: -1.2s; }
+.app-bg__spark--5 { --x: 31%; --y: 40%; --s: 3px; --duration: 4s; --delay: -3.3s; }
+.app-bg__spark--6 { --x: 37%; --y: 82%; --s: 2px; --duration: 3.2s; --delay: -2.8s; }
+.app-bg__spark--7 { --x: 43%; --y: 19%; --s: 3px; --duration: 2.9s; --delay: -1.9s; }
+.app-bg__spark--8 { --x: 49%; --y: 61%; --s: 2px; --duration: 3.7s; --delay: -0.7s; }
+.app-bg__spark--9 { --x: 56%; --y: 33%; --s: 4px; --duration: 3s; --delay: -2.5s; }
+.app-bg__spark--10 { --x: 62%; --y: 74%; --s: 2px; --duration: 3.5s; --delay: -1.4s; }
+.app-bg__spark--11 { --x: 68%; --y: 14%; --s: 3px; --duration: 2.6s; --delay: -2s; }
+.app-bg__spark--12 { --x: 73%; --y: 47%; --s: 2px; --duration: 3.8s; --delay: -3.1s; }
+.app-bg__spark--13 { --x: 79%; --y: 22%; --s: 4px; --duration: 3.3s; --delay: -1.1s; }
+.app-bg__spark--14 { --x: 86%; --y: 66%; --s: 2px; --duration: 2.9s; --delay: -2.2s; }
+.app-bg__spark--15 { --x: 94%; --y: 38%; --s: 3px; --duration: 3.6s; --delay: -0.9s; }
+.app-bg__spark--16 { --x: 8%; --y: 79%; --s: 2px; --duration: 3.1s; --delay: -2.7s; }
+.app-bg__spark--17 { --x: 16%; --y: 55%; --s: 3px; --duration: 3.9s; --delay: -1.5s; }
+.app-bg__spark--18 { --x: 27%; --y: 27%; --s: 2px; --duration: 2.8s; --delay: -3.5s; }
+.app-bg__spark--19 { --x: 35%; --y: 8%; --s: 3px; --duration: 3.4s; --delay: -0.5s; }
+.app-bg__spark--20 { --x: 45%; --y: 88%; --s: 2px; --duration: 2.7s; --delay: -2.1s; }
+.app-bg__spark--21 { --x: 53%; --y: 11%; --s: 2px; --duration: 3.6s; --delay: -1.6s; }
+.app-bg__spark--22 { --x: 60%; --y: 56%; --s: 3px; --duration: 3s; --delay: -2.9s; }
+.app-bg__spark--23 { --x: 70%; --y: 84%; --s: 2px; --duration: 3.3s; --delay: -0.8s; }
+.app-bg__spark--24 { --x: 77%; --y: 7%; --s: 3px; --duration: 2.9s; --delay: -2.4s; }
+.app-bg__spark--25 { --x: 83%; --y: 52%; --s: 2px; --duration: 3.7s; --delay: -3.2s; }
+.app-bg__spark--26 { --x: 90%; --y: 16%; --s: 4px; --duration: 2.6s; --delay: -1.3s; }
+.app-bg__spark--27 { --x: 96%; --y: 75%; --s: 2px; --duration: 3.5s; --delay: -2.6s; }
+.app-bg__spark--28 { --x: 51%; --y: 43%; --s: 2px; --duration: 3.9s; --delay: -1.8s; }
+
+.app-bg--dashboard .app-bg__trace {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 197, 45, 0.44), transparent);
+  box-shadow: 0 0 18px rgba(255, 197, 45, 0.42);
+}
+
+.app-bg--dashboard .app-bg__trace::after {
+  width: 42%;
+  height: 9px;
+  top: -4px;
+  animation-name: app-bg-dashboard-run;
+}
+
+.app-bg--dashboard .app-bg__trace--1 { --x: -4%; --y: 74%; --w: 28vw; --rotate: -17deg; --duration: 4.6s; --delay: -1.1s; }
+.app-bg--dashboard .app-bg__trace--2 { --x: 7%; --y: 77%; --w: 24vw; --rotate: -9deg; --duration: 5.2s; --delay: -2.8s; }
+.app-bg--dashboard .app-bg__trace--3 { --x: 24%; --y: 82%; --w: 24vw; --rotate: 0deg; --duration: 5.8s; --delay: -4.1s; }
+.app-bg--dashboard .app-bg__trace--4 { --x: 54%; --y: 82%; --w: 24vw; --rotate: 0deg; --duration: 5.6s; --delay: -1.7s; }
+.app-bg--dashboard .app-bg__trace--5 { --x: 73%; --y: 77%; --w: 25vw; --rotate: 9deg; --duration: 4.9s; --delay: -3.3s; }
+.app-bg--dashboard .app-bg__trace--6 { --x: 83%; --y: 73%; --w: 24vw; --rotate: 18deg; --duration: 5.3s; --delay: -2.3s; }
+.app-bg--dashboard .app-bg__trace--7 { --x: 3%; --y: 67%; --w: 22vw; --rotate: -28deg; --duration: 6s; --delay: -4.7s; --opacity: 0.72; }
+.app-bg--dashboard .app-bg__trace--8 { --x: 76%; --y: 66%; --w: 22vw; --rotate: 28deg; --duration: 6.2s; --delay: -3.9s; --opacity: 0.74; }
+.app-bg--dashboard .app-bg__trace--9 { --x: 48%; --y: 60%; --w: 22vw; --rotate: 90deg; --duration: 4.4s; --delay: -2.2s; --opacity: 0.44; }
+.app-bg--dashboard .app-bg__trace--10 { --x: 8%; --y: 0%; --w: 43vh; --rotate: 90deg; --duration: 5.6s; --delay: -1.5s; --opacity: 0.52; }
+.app-bg--dashboard .app-bg__trace--11 { --x: 95%; --y: 0%; --w: 54vh; --rotate: 90deg; --duration: 5.1s; --delay: -3.5s; --opacity: 0.58; }
+.app-bg--dashboard .app-bg__trace--12 { --x: 76%; --y: 18%; --w: 18vw; --rotate: 90deg; --duration: 4.9s; --delay: -2.6s; --opacity: 0.36; }
+.app-bg--dashboard .app-bg__trace--13 { --x: 0%; --y: 88%; --w: 18vw; --rotate: -8deg; --duration: 4.7s; --delay: -3.8s; --opacity: 0.86; }
+.app-bg--dashboard .app-bg__trace--14 { --x: 82%; --y: 89%; --w: 18vw; --rotate: 8deg; --duration: 4.7s; --delay: -1.9s; --opacity: 0.86; }
+
+.app-bg--dashboard .app-bg__node--1 { --x: 5%; --y: 78%; --delay: -0.2s; --s: 6px; }
+.app-bg--dashboard .app-bg__node--2 { --x: 16%; --y: 72%; --delay: -1.4s; --s: 4px; }
+.app-bg--dashboard .app-bg__node--3 { --x: 28%; --y: 86%; --delay: -2.1s; --s: 4px; }
+.app-bg--dashboard .app-bg__node--4 { --x: 43%; --y: 80%; --delay: -3.2s; --s: 4px; }
+.app-bg--dashboard .app-bg__node--5 { --x: 58%; --y: 80%; --delay: -2.5s; --s: 4px; }
+.app-bg--dashboard .app-bg__node--6 { --x: 73%; --y: 86%; --delay: -1s; --s: 4px; }
+.app-bg--dashboard .app-bg__node--7 { --x: 87%; --y: 72%; --delay: -3.8s; --s: 5px; }
+.app-bg--dashboard .app-bg__node--8 { --x: 96%; --y: 79%; --delay: -2.9s; --s: 5px; }
+.app-bg--dashboard .app-bg__node--9 { --x: 8%; --y: 50%; --delay: -1.8s; --s: 4px; }
+.app-bg--dashboard .app-bg__node--10 { --x: 77%; --y: 33%; --delay: -2.6s; --s: 4px; }
+.app-bg--dashboard .app-bg__node--11 { --x: 95%; --y: 39%; --delay: -3.5s; --s: 5px; }
+.app-bg--dashboard .app-bg__node--12 { --x: 22%; --y: 10%; --delay: -1.1s; --s: 5px; }
+
+@keyframes app-bg-gold-flow {
+  0% {
+    opacity: 0;
+    transform: translateX(-135%);
+  }
+  12% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(330%);
+  }
+}
+
+@keyframes app-bg-node-pulse {
+  0%, 100% {
+    opacity: 0.36;
+    transform: scale(0.72);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes app-bg-dashboard-run {
+  0% {
+    opacity: 0;
+    transform: translateX(-145%) scaleX(0.6);
+  }
+  14% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+    transform: translateX(190%) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(330%) scaleX(0.7);
+  }
+}
+
+@keyframes app-bg-dashboard-breathe {
+  0%, 100% {
+    filter: brightness(0.92) saturate(1);
+    transform: scale(1.018);
+  }
+  50% {
+    filter: brightness(1.14) saturate(1.18);
+    transform: scale(1.035);
+  }
+}
+
+@keyframes app-bg-dashboard-glow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translateY(2%) scaleX(0.98);
+  }
+  50% {
+    opacity: 0.72;
+    transform: translateY(-2%) scaleX(1.04);
+  }
+}
+
+@keyframes app-bg-dashboard-floor {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 15vw 0, 0 68px;
+  }
+}
+
+@keyframes app-bg-dashboard-sweep {
+  from {
+    opacity: 0.28;
+    transform: translate3d(-7%, 1%, 0) scaleX(0.98);
+  }
+  to {
+    opacity: 0.68;
+    transform: translate3d(7%, -1%, 0) scaleX(1.04);
+  }
+}
+
+@keyframes app-bg-beam-drift {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(-30%) scaleY(0.72);
+  }
+  12% {
+    opacity: 0.18;
+  }
+  45% {
+    opacity: 0.72;
+    transform: translateY(22%) scaleY(1);
+  }
+  82% {
+    opacity: 0.12;
+  }
+}
+
+@keyframes app-bg-sparkle {
+  0%, 100% {
+    opacity: 0.08;
+    transform: translate3d(0, 0, 0) scale(0.45);
+  }
+  18% {
+    opacity: 0.95;
+    transform: translate3d(0, -2px, 0) scale(1.45);
+  }
+  26% {
+    opacity: 0.22;
+    transform: translate3d(0, 1px, 0) scale(0.72);
+  }
+  52% {
+    opacity: 0.78;
+    transform: translate3d(1px, -1px, 0) scale(1.08);
+  }
+  70% {
+    opacity: 0.14;
+    transform: translate3d(0, 0, 0) scale(0.58);
+  }
+}
+
+@keyframes dashboard-glass-sheen {
+  0%, 100% {
+    opacity: 0.42;
+    transform: translateX(-44%);
+  }
+  48% {
+    opacity: 0.86;
+    transform: translateX(42%);
+  }
+}
+
+@keyframes dashboard-glass-pulse {
+  0%, 100% {
+    opacity: 0.38;
+    background-position: 0 0, 100% 0;
+  }
+  50% {
+    opacity: 0.9;
+    background-position: 100% 0, 100% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-stat-card::before,
+  .dashboard-stat-card::after,
+  .dashboard-strategy-panel::before,
+  .dashboard-strategy-panel::after,
+  .dashboard-chart-panel::before,
+  .dashboard-chart-panel::after,
+  .dashboard-analytics-panel::before,
+  .dashboard-analytics-panel::after,
+  .dashboard-table-panel::before,
+  .dashboard-table-panel::after,
+  .app-bg__trace::after,
+  .app-bg__node,
+  .app-bg__beam,
+  .app-bg__spark,
+  .app-bg--dashboard::before,
+  .app-bg--dashboard::after,
+  .app-bg--dashboard .app-bg__image,
+  .app-bg--dashboard .app-bg__motion::before,
+  .app-bg--dashboard .app-bg__motion::after {
+    animation: none;
+  }
+}
+
+.text-gray-600 { color: #71717a !important; }
+.text-gray-700 { color: #52525b !important; }
+
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;

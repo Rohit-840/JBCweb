@@ -363,7 +363,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
   const totalPnl    = live.reduce((s, a) => s + (a.profit  ?? 0), 0);
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-[#0a0a0a] relative overflow-y-auto">
+    <div className="min-h-screen min-h-[100dvh] bg-transparent relative overflow-y-auto">
       {/* ambient glows */}
       <div className="fixed pointer-events-none w-[700px] h-[700px] rounded-full bg-yellow-500/[0.025] blur-[140px] -top-60 -left-60" />
       <div className="fixed pointer-events-none w-[700px] h-[700px] rounded-full bg-yellow-500/[0.025] blur-[140px] -bottom-60 -right-60" />

@@ -272,11 +272,11 @@ export default function EquityChart({ fullHistory, account, strategyData, strate
 
   return (
     <div
-      className="relative bg-[#0d0d0d] rounded-2xl p-5 border border-white/[0.06] flex-1 min-w-0 overflow-hidden"
+      className="dashboard-chart-panel relative bg-[#0d0d0d] rounded-2xl p-5 border border-white/[0.06] flex-1 min-w-0 overflow-hidden"
       style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 32px rgba(0,0,0,0.5)" }}
     >
       {/* ambient corner glow */}
-      <div className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full"
+      <div className="dashboard-panel-ambient pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full"
         style={{ background: `radial-gradient(circle, ${gradColor}14 0%, transparent 70%)` }} />
 
       {/* header */}

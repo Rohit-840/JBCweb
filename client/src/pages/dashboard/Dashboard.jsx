@@ -49,7 +49,7 @@ export default function Dashboard({ onLogout, onSwitchAccount }) {
   };
 
   return (
-    <div className="flex h-screen h-[100dvh] bg-[#0a0a0a] overflow-hidden">
+    <div className="dashboard-workspace flex h-screen h-[100dvh] bg-transparent overflow-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -67,7 +67,7 @@ export default function Dashboard({ onLogout, onSwitchAccount }) {
         onSwitchAccount={onSwitchAccount}
       />
 
-      <main className="flex-1 overflow-y-auto min-w-0">
+      <main className="dashboard-main flex-1 overflow-y-auto min-w-0">
         {/* Mobile top bar */}
         <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0d0d0d] sticky top-0 z-30">
           <button

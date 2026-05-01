@@ -20,11 +20,11 @@ export default function StatsCards({ account }) {
       {CARDS.map(({ key, label, color }) => {
         const value = account?.[key];
         return (
-          <div key={key} className="bg-[#111] rounded-xl p-4 border border-white/5">
-            <p className="text-[10px] tracking-[0.15em] text-gray-500 uppercase mb-2">
+          <div key={key} className="dashboard-stat-card bg-[#111] rounded-xl p-4 border border-white/5">
+            <p className="text-[10px] tracking-[0.2em] text-gray-500 uppercase mb-2">
               {label}
             </p>
-            <p className={`text-lg font-semibold ${color(Number(value) || 0)}`}>
+            <p className={`text-lg font-bold ${color(Number(value) || 0)}`}>
               {fmt(value)}
             </p>
           </div>

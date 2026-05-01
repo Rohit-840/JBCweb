@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { STRATEGY_CONFIG, STRATEGIES, applyTPSLFilter } from "../constants.js";
 import {
   normaliseSymbol,
@@ -332,7 +333,7 @@ function EditModal({
   const inputClsLg = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-700 outline-none focus:border-yellow-500/40 focus:bg-white/[0.07] transition-colors";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80">
       <div
         className="bg-[#0d0d0d] border border-white/10 rounded-2xl shadow-2xl
           w-full max-w-2xl flex flex-col overflow-hidden"
@@ -718,7 +719,7 @@ export default function StrategyFilter({
 
   return (
     <>
-      <div className="bg-[#111] rounded-xl px-4 py-3.5 border border-white/5 mb-4">
+      <div className="dashboard-strategy-panel bg-[#111] rounded-xl px-4 py-3.5 border border-white/5 mb-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <p className="text-[10px] tracking-[0.2em] text-yellow-400/70 uppercase mb-0.5">
@@ -872,14 +873,14 @@ export default function StrategyFilter({
         )}
       </div>
 
-      {popup && (
+      {popup && createPortal(
         <>
           <div
-            className="fixed inset-0 bg-black/75 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/75 z-[100]"
             onClick={closePopup}
           />
 
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-5">
             <div
               className="bg-[#0d0d0d] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden
                 w-[95vw] md:w-[90vw] max-w-[1180px]"
@@ -1102,10 +1103,11 @@ export default function StrategyFilter({
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
-      {editOpen && (
+      {editOpen && createPortal(
         <EditModal
           strategies={strategies}
           onAddSymbol={onAddSymbol}
@@ -1116,11 +1118,12 @@ export default function StrategyFilter({
           openSymbols={openTradeSymbolsSet}
           expertRules={expertRules}
           onClose={() => setEditOpen(false)}
-        />
+        />,
+        document.body
       )}
 
-      {interactiveChartOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-md">
+      {interactiveChartOpen && createPortal(
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-8 bg-black/90">
           <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden relative">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/20">
               <div>
@@ -1148,7 +1151,8 @@ export default function StrategyFilter({
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

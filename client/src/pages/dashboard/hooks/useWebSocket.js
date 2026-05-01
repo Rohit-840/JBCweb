@@ -3,6 +3,16 @@ import { useState, useEffect, useRef } from "react";
 function getDashboardWsUrl() {
   if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+  if (import.meta.env.DEV) {
+    const target = import.meta.env.VITE_DEV_MT5_TARGET || "http://localhost:8001";
+    const targetUrl = new URL(target);
+    const host = ["localhost", "127.0.0.1"].includes(targetUrl.hostname)
+      ? window.location.hostname
+      : targetUrl.hostname;
+    return `${protocol}//${host}:${targetUrl.port || "8001"}/ws/dashboard`;
+  }
+
   return `${protocol}//${window.location.host}/ws/dashboard`;
 }
 
