@@ -52,37 +52,3 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 
 export default app;
-
-// ✅ Middleware
-// app.use(cors({
-//   origin: function (origin, callback) {
-//     if (!origin) return callback(null, true);
-    
-//     // Define your allowed origins
-//     const allowedOrigins = [
-//       "http://localhost:3000",      // Local React development
-//       "http://localhost:5173",      // Local Vite development
-//       "http://38.255.35.152:5173",  // New specific IP
-//       process.env.FRONTEND_URL      // Your VPS Public IP or Domain Name (from .env)
-//     ];
-
-//     // Check if the incoming origin is in our allowed list
-//     if (allowedOrigins.includes(origin)) {
-//       return callback(null, true);
-//     }
-
-//     // You can keep the local network regex if you test on LAN
-//     if (
-//       /^https?:\/\/192\.168\.\d+\.\d+/.test(origin) ||
-//       /^https?:\/\/10\.\d+\.\d+\.\d+/.test(origin) ||
-//       /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/.test(origin) ||
-//       /^https?:\/\/\d+\.\d+\.\d+\.\d+/.test(origin)
-//     ) {
-//       return callback(null, true);
-//     }
-//     console.warn("CORS blocked origin:", origin);
-
-//     callback(new Error("Not allowed by CORS"));
-//   },
-//   credentials: true
-// }));

@@ -194,11 +194,20 @@ function SuggestInput({
 }
 
 /* volume filter panel (right side, above chart) */
-function VolumeFilter({ symbolHistory, symbolTrades = [], symbolHistoryEntries = [], volumeFilter, setVolumeFilter }) {
+function VolumeFilter({
+  symbolHistory,
+  symbolTrades = [],
+  symbolHistoryEntries = [],
+  volumeFilter,
+  setVolumeFilter,
+  fixedVolumes = [],
+  volumeLabels = {},
+}) {
   const availableVolumes = useMemo(() => {
+    if (fixedVolumes.length > 0) return fixedVolumes;
     const set = new Set([...symbolHistory, ...symbolTrades, ...symbolHistoryEntries].map((h) => h.volume));
     return [...set].sort((a, b) => a - b);
-  }, [symbolHistory, symbolTrades, symbolHistoryEntries]);
+  }, [fixedVolumes, symbolHistory, symbolTrades, symbolHistoryEntries]);
 
   const activeVol = volumeFilter.trim() !== "" ? parseFloat(volumeFilter) : null;
 
@@ -246,7 +255,7 @@ function VolumeFilter({ symbolHistory, symbolTrades = [], symbolHistoryEntries =
                     : "bg-white/[0.03] border-white/10 text-gray-500 hover:text-gray-300 hover:border-white/20"
                   }`}
               >
-                {vol}
+                {volumeLabels[vol] || vol}
               </button>
             );
           })}
@@ -687,6 +696,25 @@ export default function StrategyFilter({
     [displayTrades]
   );
   const activeTimeframes = [...new Set(activeExpertRules.map((rule) => rule.timeframe))];
+  const popupFixedVolumes = useMemo(() => {
+    if (!popup) return [];
+    const symbol = popup.toLowerCase();
+    return [...new Set(
+      activeExpertRules
+        .filter((rule) => rule.symbol === symbol && rule.volume !== null && rule.volume !== undefined)
+        .map((rule) => rule.volume)
+    )].sort((a, b) => a - b);
+  }, [activeExpertRules, popup]);
+  const popupVolumeLabels = useMemo(() => {
+    if (!popup) return {};
+    const symbol = popup.toLowerCase();
+    return activeExpertRules
+      .filter((rule) => rule.symbol === symbol && rule.volume !== null && rule.volume !== undefined && rule.timeframe)
+      .reduce((labels, rule) => ({
+        ...labels,
+        [rule.volume]: `${rule.volume} / TF ${rule.timeframe}`,
+      }), {});
+  }, [activeExpertRules, popup]);
 
   return (
     <>
@@ -898,7 +926,7 @@ export default function StrategyFilter({
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 md:px-6 py-4 border-b border-white/5 shrink-0">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 px-4 md:px-6 py-4 border-b border-white/5 shrink-0">
                 <StatCard label="MT5 History Rows" value={displayHistoryEntries.length} />
                 <StatCard
                   label="Closed Trades"
@@ -914,6 +942,11 @@ export default function StrategyFilter({
                   label="Floating PNL"
                   value={`${openPnl >= 0 ? "+" : ""}$${openPnl.toFixed(2)}`}
                   color={openPnl >= 0 ? "text-green-400" : "text-red-400"}
+                />
+                <StatCard
+                  label="Average RR"
+                  value={stats.avgRR}
+                  color="text-yellow-400"
                 />
               </div>
 
@@ -987,6 +1020,8 @@ export default function StrategyFilter({
                     symbolHistoryEntries={symbolHistoryEntries}
                     volumeFilter={popupVolume}
                     setVolumeFilter={setPopupVolume}
+                    fixedVolumes={popupFixedVolumes}
+                    volumeLabels={popupVolumeLabels}
                   />
 
                   <div className="px-4 pt-3 pb-3 border-b border-white/5 shrink-0 space-y-2">

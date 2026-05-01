@@ -6,54 +6,38 @@ const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"
 const DAY_SHORT   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 // period start
-function getPeriodCutoff(label) {
-  const n = new Date();
+function getPeriodCutoff(label, anchorMs = Date.now()) {
+  const n = new Date(anchorMs);
   switch (label) {
     case "1D":
-      return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 0, 0, 0, 0).getTime() / 1000;
+      n.setDate(n.getDate() - 1);
+      return n.getTime() / 1000;
     case "1W": {
-      const d = n.getDay();                          // 0=Sun … 6=Sat
-      const back = d === 0 ? -6 : 1 - d;            // shift to Monday
-      return new Date(n.getFullYear(), n.getMonth(), n.getDate() + back, 0, 0, 0, 0).getTime() / 1000;
+      n.setDate(n.getDate() - 7);
+      return n.getTime() / 1000;
     }
     case "1M":
-      return new Date(n.getFullYear(), n.getMonth(), 1, 0, 0, 0, 0).getTime() / 1000;
+      n.setMonth(n.getMonth() - 1);
+      return n.getTime() / 1000;
     case "1Y":
-      return new Date(n.getFullYear(), 0, 1, 0, 0, 0, 0).getTime() / 1000;
+      n.setFullYear(n.getFullYear() - 1);
+      return n.getTime() / 1000;
     default:
       return 0;
   }
 }
 
 // period end
-function getPeriodEnd(label) {
-  const n = new Date();
-  switch (label) {
-    case "1D":
-      // midnight tonight 
-      return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0).getTime();
-    case "1W": {
-      // next monday midnight
-      const d    = n.getDay();
-      const fwd  = d === 0 ? 1 : 8 - d;
-      return new Date(n.getFullYear(), n.getMonth(), n.getDate() + fwd, 0, 0, 0, 0).getTime();
-    }
-    case "1M":
-      // first day of next month
-      return new Date(n.getFullYear(), n.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
-    case "1Y":
-      // jan 1 of next year
-      return new Date(n.getFullYear() + 1, 0, 1, 0, 0, 0, 0).getTime();
-    default:
-      return Date.now();
-  }
+function getPeriodEnd(label, anchorMs = Date.now()) {
+  return anchorMs;
 }
 
 // build cumulative-pnl points
-function buildPts(history, periodLabel) {
-  const cutoff = getPeriodCutoff(periodLabel);
+function buildPts(history, periodLabel, anchorMs) {
+  const cutoff = getPeriodCutoff(periodLabel, anchorMs);
+  const end = getPeriodEnd(periodLabel, anchorMs) / 1000;
   const sorted = (history || [])
-    .filter((h) => h.time >= cutoff)
+    .filter((h) => h.time >= cutoff && h.time <= end)
     .sort((a, b) => a.time - b.time);
   let cum = 0;
   const pts = sorted.map((h) => ({ time: h.time * 1000, equity: (cum += h.profit) }));
@@ -161,7 +145,7 @@ export default function EquityChart({ fullHistory, account, strategyData, strate
   const containerRef = useRef(null);
   const [width,  setWidth]  = useState(600);
   const [period, setPeriod] = useState("1M");
-  const [nowMs,  setNowMs]  = useState(0);
+  const [nowMs,  setNowMs]  = useState(() => Date.now());
 
   useEffect(() => {
     const obs = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
@@ -178,7 +162,7 @@ export default function EquityChart({ fullHistory, account, strategyData, strate
   const isStrategy = !!strategyData && strategyData.length >= 2;
 
   const accountEquityPts = useMemo(() => {
-    const base = buildPts(fullHistory, period);
+    const base = buildPts(fullHistory, period, nowMs);
 
     const floatingPnl   = account?.profit;
     if (floatingPnl == null) return base;
@@ -190,15 +174,16 @@ export default function EquityChart({ fullHistory, account, strategyData, strate
 
   const strategyPts = useMemo(() => {
     if (!isStrategy) return [];
-    const cutoff = getPeriodCutoff(period) * 1000;
+    const cutoff = getPeriodCutoff(period, nowMs) * 1000;
+    const periodEnd = getPeriodEnd(period, nowMs);
     const sorted = [...strategyData].sort((a, b) => a.time - b.time);
     const beforeCutoff = [...sorted].reverse().find((p) => p.time < cutoff);
     const baseValue = beforeCutoff?.equity ?? 0;
     const visible = sorted
-      .filter((p) => p.time >= cutoff)
+      .filter((p) => p.time >= cutoff && p.time <= periodEnd)
       .map((p) => ({ ...p, equity: p.equity - baseValue }));
     return [{ time: cutoff, equity: 0 }, ...visible];
-  }, [isStrategy, strategyData, period]);
+  }, [isStrategy, strategyData, period, nowMs]);
 
   const primaryPts = isStrategy ? strategyPts : accountEquityPts;
   const allSeriesPts = isStrategy
@@ -218,8 +203,8 @@ export default function EquityChart({ fullHistory, account, strategyData, strate
 
   // time range
   const dataMax  = hasAnyData ? Math.max(...allSeriesPts.map((p) => p.time)) : 1;
-  const minT     = getPeriodCutoff(period) * 1000;
-  const maxT     = Math.max(dataMax, getPeriodEnd(period));
+  const minT     = getPeriodCutoff(period, nowMs) * 1000;
+  const maxT     = Math.max(dataMax, getPeriodEnd(period, nowMs));
   const tSpan    = maxT - minT || 1;
 
   // y scale

@@ -7,28 +7,33 @@ export const STRATEGIES = {
 
 export const STRATEGY_EXPERT_RULES = {
   TITAN: [
-    { symbol: "xauusd", magic: 23241233,  timeframe: "2", volume: 0.1  },
-    { symbol: "xauusd", magic: 5423223,   timeframe: "1", volume: 0.2  },
-    { symbol: "xauusd", magic: 54544534,  timeframe: "3", volume: 0.3  },
-    { symbol: "nas100", magic: 42353242,  timeframe: "1", volume: 1    },
-    { symbol: "nas100", magic: 5343123,   timeframe: "2", volume: 2    },
-    { symbol: "nas100", magic: 4322133,   timeframe: "3", volume: 3    },
-    { symbol: "btcusd", magic: 5324212,   timeframe: "1", volume: 0.1  },
-    { symbol: "btcusd", magic: 3254231,   timeframe: "2", volume: 0.2  },
-    { symbol: "btcusd", magic: 53321323,  timeframe: "3", volume: 0.3  },
-    { symbol: "us30",   magic: 5231242,   timeframe: "1", volume: 0.5  },
-    { symbol: "us30",   magic: 453242412, timeframe: "3", volume: 1.5  },
-    { symbol: "spotcrude",   magic: 41232421, timeframe: "3", volume: 0.7  },
-    { symbol: "spotcrude",   magic: 5545447, timeframe: "2", volume: 1  },
+    { symbol: "xauusd",  timeframe: "2", volume: 0.1  },
+    { symbol: "xauusd",   timeframe: "1", volume: 0.2  },
+    { symbol: "xauusd",  timeframe: "3", volume: 0.3  },
+    
+    { symbol: "nas100",  timeframe: "1", volume: 1    },
+    { symbol: "nas100",   timeframe: "2", volume: 2    },
+    { symbol: "nas100",   timeframe: "3", volume: 3    },
+
+    { symbol: "btcusd",   timeframe: "1", volume: 0.1  },
+    { symbol: "btcusd",   timeframe: "2", volume: 0.2  },
+    { symbol: "btcusd",  timeframe: "3", volume: 0.3  },
+
+    { symbol: "us30",    timeframe: "1", volume: 0.5  },
+    { symbol: "us30",   timeframe: "3", volume: 1.5  },
+
+    { symbol: "spotcrude",   timeframe: "3", volume: 0.7  },
+    { symbol: "spotcrude",   timeframe: "2", volume: 1  },
   ],
   ORION: [],
   ALPHA: [
-    { symbol: "eurusd", magic: 123456, timeframe: "15", volume: 0.82 },
-    { symbol: "eurusd", magic: 123456, timeframe: "15", volume: 1.97 },
-    { symbol: "eurusd", magic: 123456, timeframe: "15", volume: 3.14 },
-    { symbol: "eurusd", magic: 123456, timeframe: "15", volume: 3.89 },
-    { symbol: "eurusd", magic: 123456, timeframe: "15", volume: 9.92 },
-    { symbol: "eurusd", magic: 123456, timeframe: "15", volume: 3.3 },
+    { symbol: "eurusd",  volume: 0.82 },
+    { symbol: "eurusd",  volume: 1.07 },
+    { symbol: "eurusd",  volume: 1.97 },
+    { symbol: "eurusd",  volume: 3.14 },
+    { symbol: "eurusd",  volume: 3.3 },
+    { symbol: "eurusd",  volume: 3.89 },
+    { symbol: "eurusd",  volume: 9.92 },
   ],
   SCRABER: [],
 };

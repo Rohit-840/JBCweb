@@ -93,7 +93,7 @@ export const buildStrategyExpertRules = (customizations = {}) => {
     result[name] = [...(result[name] || []), ...mergedSavedRules];
   }
 
-  result.ORION = [];
+  result.ORION = result.ORION || [];
   return result;
 };
 
