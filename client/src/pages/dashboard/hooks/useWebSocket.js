@@ -2,6 +2,14 @@ import { useState, useEffect, useRef } from "react";
 
 function getDashboardWsUrl() {
   if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+  if (import.meta.env.DEV) {
+    const target = import.meta.env.VITE_DEV_MT5_TARGET || "http://localhost:8001";
+    const url = new URL(target);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.pathname = "/ws/dashboard";
+    url.search = "";
+    return url.toString();
+  }
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${protocol}//${window.location.host}/ws/dashboard`;
 }
