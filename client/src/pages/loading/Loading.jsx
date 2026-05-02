@@ -1,29 +1,84 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import ThreeScene from "../../components/ThreeScene.jsx"; // Adjust path if needed
+import { AnimatePresence, motion } from "framer-motion";
+import LoadingThreeScene from "../../components/LoadingThreeScene.jsx";
+
+const TITLE = "JB CROWNSTONE";
+const CHUNK_OFFSETS = [
+  [-6, -5],
+  [6, -1],
+  [-3, 5],
+];
+
+function ChunkedTitle({ show }) {
+  return (
+    <motion.h1
+      className="loading-title text-3xl font-semibold tracking-[0.16em] sm:text-5xl md:text-6xl"
+      style={{ fontFamily: "'Playfair Display', serif" }}
+      initial={{ opacity: 0 }}
+      animate={show ? { opacity: 1 } : {}}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
+      {TITLE.split("").map((char, index) => {
+        if (char === " ") {
+          return <span key={`space-${index}`} className="loading-title__space" />;
+        }
+
+        const direction = index % 2 === 0 ? -1 : 1;
+        return (
+          <span key={`${char}-${index}`} className="loading-title__cell">
+            {CHUNK_OFFSETS.map(([x, y], pieceIndex) => (
+              <motion.span
+                key={pieceIndex}
+                className="loading-title__chunk"
+                initial={{
+                  x: direction * (150 + pieceIndex * 30),
+                  y: (pieceIndex - 1) * 48,
+                  rotate: direction * (8 + pieceIndex * 4),
+                  opacity: 0,
+                  scale: 0.62,
+                }}
+                animate={show ? {
+                  x: [direction * (150 + pieceIndex * 30), x, x],
+                  y: [(pieceIndex - 1) * 48, y, y],
+                  rotate: [direction * (8 + pieceIndex * 4), 0, 0],
+                  opacity: [0, 0.9, 0],
+                  scale: [0.62, 1, 0.52],
+                } : {}}
+                transition={{
+                  duration: 1.05,
+                  delay: 0.05 + index * 0.03 + pieceIndex * 0.045,
+                  ease: [0.16, 1, 0.3, 1],
+                  times: [0, 0.76, 1],
+                }}
+              />
+            ))}
+            <motion.span
+              className="loading-title__letter"
+              initial={{ opacity: 0, filter: "blur(8px)" }}
+              animate={show ? { opacity: 1, filter: "blur(0px)" } : {}}
+              transition={{
+                duration: 0.36,
+                delay: 0.48 + index * 0.028,
+                ease: "easeOut",
+              }}
+            >
+              {char}
+            </motion.span>
+          </span>
+        );
+      })}
+    </motion.h1>
+  );
+}
 
 export default function Loading({ onFinish }) {
   const [showText, setShowText] = useState(false);
   const [exit, setExit] = useState(false);
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
 
-  // mouse tracking
   useEffect(() => {
-    const handleMove = (e) => {
-      const x = (e.clientX / window.innerWidth - 0.5) * 2;
-      const y = (e.clientY / window.innerHeight - 0.5) * 2;
-      setMouse({ x, y });
-    };
-
-    window.addEventListener("mousemove", handleMove);
-    return () => window.removeEventListener("mousemove", handleMove);
-  }, []);
-
-  // ⏱ Animation timing
-  useEffect(() => {
-    const t1 = setTimeout(() => setShowText(true), 1000);
-    const t2 = setTimeout(() => setExit(true), 4000);
-    const t3 = setTimeout(() => onFinish(), 5000);
+    const t1 = setTimeout(() => setShowText(true), 700);
+    const t2 = setTimeout(() => setExit(true), 2750);
+    const t3 = setTimeout(() => onFinish(), 2950);
 
     return () => {
       clearTimeout(t1);
@@ -36,81 +91,40 @@ export default function Loading({ onFinish }) {
     <AnimatePresence>
       {!exit && (
         <motion.div
-          className="fixed inset-0 bg-black overflow-hidden"
+          className="loading-screen fixed inset-0 overflow-hidden bg-[#030303]"
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.1 }}
-          transition={{ duration: 1 }}
+          exit={{ opacity: 0, scale: 1.012 }}
+          transition={{ duration: 0.45, ease: "easeInOut" }}
         >
-          {/* 🌌 3D BACKGROUND */}
-          <div
-            className="absolute inset-0 z-0"
-            style={{
-              transform: `translate(${mouse.x * 5}px, ${mouse.y * 5}px)`
-            }}
-          >
-            <ThreeScene mouse={mouse} />
-          </div>
+          <LoadingThreeScene mode="loading" />
 
-          {/* 🔥 PERFECT EDGE FADE */}
-          <div className="pointer-events-none absolute inset-0 z-50">
-            <div
-              className="w-full h-full"
-              style={{
-                background: `
-                  radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.9) 85%),
-                  linear-gradient(to top, rgba(0,0,0,0.8), transparent 40%),
-                  linear-gradient(to bottom, rgba(0,0,0,0.8), transparent 40%)
-                `
-              }}
-            />
-          </div>
+          <div className="loading-screen__vignette" />
+          <div className="loading-screen__center-glow" />
 
-          {/* 🧊 GLASS OVERLAY */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-md z-10" />
-
-          {/* 🌫 DEPTH OVERLAY */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-80 z-20" />
-
-          {/* 💡 GLOW PULSE BEHIND LOGO */}
-          <div className="absolute inset-0 flex items-center justify-center z-20">
-            <div className="w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
-          </div>
-
-          {/* 🖱️ CURSOR TRAIL */}
-          <div
-            className="pointer-events-none fixed w-10 h-10 rounded-full bg-cyan-400 blur-2xl z-30"
-            style={{
-              left: `${mouse.x * 200 + window.innerWidth / 2}px`,
-              top: `${mouse.y * 200 + window.innerHeight / 2}px`,
-              transform: "translate(-50%, -50%)"
-            }}
-          />
-
-          {/* 📝 TEXT CONTAINER */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center z-20 px-2 sm:px-16 md:px-24 lg:px-32"
+            className="absolute inset-0 z-20 flex items-center justify-center px-5"
             initial={{ opacity: 0 }}
             animate={showText ? { opacity: 1 } : {}}
+            transition={{ duration: 0.9, ease: "easeOut" }}
           >
-            <div className="w-full max-w-[90vw] flex justify-center">
-              <motion.h1
-                // Added py-2 and px-4 here for vertical/horizontal breathing room
-                className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl 
-                           font-semibold text-transparent bg-clip-text 
-                           tracking-[0.12em] text-center px-4 py-2"
-                style={{
-                  fontFamily: "'Playfair Display', serif",
-                  backgroundImage:
-                    "linear-gradient(90deg, #d4af37, #f5e6a5, #c9a227, #f5e6a5, #d4af37)",
-                  textShadow: "0 0 20px rgba(212,175,55,0.4)"
-                }}
-                initial={{ opacity: 0, scale: 0.9, letterSpacing: "0.2em" }}
-                animate={{ opacity: 1, scale: 1, letterSpacing: "0.12em" }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
+            <div className="text-center">
+              <motion.p
+                className="mb-4 text-[10px] font-semibold uppercase tracking-[0.34em] text-yellow-400/60"
+                initial={{ opacity: 0 }}
+                animate={showText ? { opacity: 1 } : {}}
+                transition={{ duration: 0.9, delay: 0.15, ease: "easeOut" }}
               >
-                {/* The non-breaking spaces on both sides fix the clipping while keeping it perfectly centered */}
-                &nbsp;JB CROWNSTONE&nbsp;
-              </motion.h1>
+                Private Wealth And Investment Management
+              </motion.p>
+              <ChunkedTitle show={showText} />
+              <motion.div
+                className="mx-auto mt-6 h-px w-56 overflow-hidden bg-yellow-400/15"
+                initial={{ opacity: 0, scaleX: 0.4 }}
+                animate={showText ? { opacity: 1, scaleX: 1 } : {}}
+                transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+              >
+                <div className="loading-screen__scanline h-full w-1/3" />
+              </motion.div>
             </div>
           </motion.div>
         </motion.div>

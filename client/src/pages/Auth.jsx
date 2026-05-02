@@ -36,7 +36,11 @@ export default function Auth({ onLogin }) {
       }
 
     } catch (err) {
-      setMsg(err.response?.data?.message || "Something went wrong");
+      if (!err.response) {
+        setMsg("Cannot reach API server. Make sure backend is running on this network URL.");
+      } else {
+        setMsg(err.response?.data?.message || "Something went wrong");
+      }
     }
 
     setLoading(false);

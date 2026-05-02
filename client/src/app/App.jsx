@@ -9,7 +9,10 @@ import AppBackground   from "../components/AppBackground.jsx";
 import api             from "../services/api.js";
 
 function App() {
-  const [loading,         setLoading]         = useState(!sessionStorage.getItem("hasSeenLoading"));
+  const [loading,         setLoading]         = useState(() => {
+    const hasSelectedAccount = localStorage.getItem("accountSelected") === "true";
+    return !hasSelectedAccount;
+  });
   const [checking,        setChecking]         = useState(false);
   const [token,           setToken]           = useState(localStorage.getItem("token"));
   const [addingAccount,   setAddingAccount]   = useState(false);
@@ -17,14 +20,13 @@ function App() {
 
   const logout = () => {
     localStorage.clear();
-    sessionStorage.removeItem("hasSeenLoading");
     setToken(null);
     setAccountSelected(false);
     setAddingAccount(false);
+    setLoading(false);
   };
 
   const handleLoadingFinish = () => {
-    sessionStorage.setItem("hasSeenLoading", "true");
     setLoading(false);
   };
 
@@ -36,9 +38,15 @@ function App() {
       .get("/mt5/status", {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .catch(() => {
-        localStorage.clear();
-        setToken(null);
+      .catch((err) => {
+        const status = err.response?.status;
+
+        if (status === 401 || status === 403) {
+          localStorage.clear();
+          setToken(null);
+          setAccountSelected(false);
+          setAddingAccount(false);
+        }
       })
       .finally(() => setChecking(false));
   }, [loading, token]);

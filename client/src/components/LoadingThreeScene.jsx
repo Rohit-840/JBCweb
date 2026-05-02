@@ -114,23 +114,13 @@ function CameraRig({ reducedMotion, loading }) {
     camera.updateProjectionMatrix();
   }, [camera, target]);
 
-  useFrame(({ clock }) => {
-    if (reducedMotion) return;
-
-    const t = clock.elapsedTime;
-    const sway = loading ? 0.075 : 0.028;
-    camera.position.x = Math.sin(t * 0.16) * sway;
-    camera.position.y = 1.15 + Math.sin(t * 0.11) * sway * 0.35;
-    camera.lookAt(target);
-  });
-
   return null;
 }
 
 function DarkEnvironment({ loading }) {
   return (
     <>
-      {loading && <color attach="background" args={[BLACK]} />}
+      <color attach="background" args={[BLACK]} />
       <fog attach="fog" args={["#050505", loading ? 8.4 : 5.2, loading ? 20 : 15]} />
       <ambientLight intensity={loading ? 0.42 : 0.11} color="#d4af37" />
       <pointLight position={[-6.1, -0.72, -2.45]} intensity={loading ? 42 : 10} color={GOLD} distance={loading ? 9.5 : 6.4} />
@@ -146,10 +136,8 @@ function PerspectiveGridFloor({ reducedMotion, loading }) {
 
   useFrame(({ clock }) => {
     if (!groupRef.current || reducedMotion) return;
-    const speed = loading ? 0.46 : 0.18;
-    groupRef.current.position.z = -1.2 + (clock.elapsedTime * speed) % 0.82;
     if (materialRef.current) {
-      materialRef.current.opacity = (loading ? 0.42 : 0.18) + Math.sin(clock.elapsedTime * 0.7) * (loading ? 0.045 : 0.02);
+      materialRef.current.opacity = (loading ? 0.42 : 0.105) + Math.sin(clock.elapsedTime * 0.7) * (loading ? 0.045 : 0.012);
     }
   });
 
@@ -160,7 +148,7 @@ function PerspectiveGridFloor({ reducedMotion, loading }) {
           ref={materialRef}
           color={SOFT_GOLD}
           transparent
-          opacity={loading ? 0.42 : 0.18}
+          opacity={loading ? 0.42 : 0.105}
           depthWrite={false}
           blending={AdditiveBlending}
         />
@@ -170,14 +158,14 @@ function PerspectiveGridFloor({ reducedMotion, loading }) {
         color={BRIGHT_GOLD}
         lineWidth={0.35}
         transparent
-        opacity={loading ? 0.46 : 0.2}
+        opacity={loading ? 0.46 : 0.12}
       />
       <Line
         points={[[0, 0.006, -10.8], [0, 0.006, 10.8]]}
         color={BRIGHT_GOLD}
         lineWidth={0.3}
         transparent
-        opacity={loading ? 0.34 : 0.095}
+        opacity={loading ? 0.34 : 0.055}
       />
     </group>
   );
@@ -188,17 +176,18 @@ function makeTrail(points) {
 }
 
 function TrailPulse({ curve, offset, speed, loading, reducedMotion, intensity = 1 }) {
+  const pulseRef = useRef(null);
   const materialRef = useRef(null);
   const attributeRef = useRef(null);
-  const positions = useMemo(() => new Float32Array(25 * 3), []);
+  const positions = useMemo(() => new Float32Array(15 * 3), []);
   const color = useMemo(() => new Color(BRIGHT_GOLD), []);
 
   useFrame(({ clock }) => {
     const time = reducedMotion ? offset : (clock.elapsedTime * speed + offset) % 1;
-    const span = loading ? 0.14 : 0.12;
+    const span = loading ? 0.14 : 0.07;
 
-    for (let i = 0; i < 25; i += 1) {
-      const u = (time - span * 0.52 + (i / 24) * span + 1) % 1;
+    for (let i = 0; i < 15; i += 1) {
+      const u = (time - span * 0.52 + (i / 14) * span + 1) % 1;
       const point = curve.getPointAt(u);
       positions[i * 3] = point.x;
       positions[i * 3 + 1] = point.y;
@@ -210,24 +199,36 @@ function TrailPulse({ curve, offset, speed, loading, reducedMotion, intensity = 
     }
 
     if (materialRef.current) {
-      materialRef.current.opacity = (loading ? 0.98 : 0.74) * intensity;
+      materialRef.current.opacity = (loading ? 0.98 : 0.36) * intensity;
+    }
+
+    const head = curve.getPointAt(time);
+    if (pulseRef.current) {
+      pulseRef.current.position.copy(head);
+      pulseRef.current.scale.setScalar((loading ? 1.28 : 0.68) * intensity);
     }
   });
 
   return (
-    <line frustumCulled={false}>
-      <bufferGeometry>
-        <bufferAttribute ref={attributeRef} attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <lineBasicMaterial
-        ref={materialRef}
-        color={color}
-        transparent
-        opacity={(loading ? 0.98 : 0.74) * intensity}
-        depthWrite={false}
-        blending={AdditiveBlending}
-      />
-    </line>
+    <>
+      <line frustumCulled={false}>
+        <bufferGeometry>
+          <bufferAttribute ref={attributeRef} attach="attributes-position" args={[positions, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial
+          ref={materialRef}
+          color={color}
+          transparent
+          opacity={(loading ? 0.98 : 0.36) * intensity}
+          depthWrite={false}
+          blending={AdditiveBlending}
+        />
+      </line>
+      <mesh ref={pulseRef} frustumCulled={false}>
+        <sphereGeometry args={[0.035, 16, 16]} />
+        <meshBasicMaterial color={BRIGHT_GOLD} transparent opacity={(loading ? 1 : 0.58) * intensity} blending={AdditiveBlending} depthWrite={false} />
+      </mesh>
+    </>
   );
 }
 
@@ -240,18 +241,18 @@ function GoldTrail({ points, offsets, speed, loading, reducedMotion, intensity =
       <Line
         points={samples}
         color={SOFT_GOLD}
-        lineWidth={(loading ? 1.15 : 0.72) * intensity}
+        lineWidth={(loading ? 1.15 : 0.34) * intensity}
         transparent
-        opacity={(loading ? 0.48 : 0.26) * intensity}
+        opacity={(loading ? 0.48 : 0.105) * intensity}
         depthWrite={false}
         blending={AdditiveBlending}
       />
       <Line
         points={samples}
         color={GOLD}
-        lineWidth={(loading ? 0.34 : 0.22) * intensity}
+        lineWidth={(loading ? 0.34 : 0.11) * intensity}
         transparent
-        opacity={(loading ? 0.72 : 0.36) * intensity}
+        opacity={(loading ? 0.72 : 0.18) * intensity}
         depthWrite={false}
         blending={AdditiveBlending}
       />
@@ -273,34 +274,22 @@ function GoldTrail({ points, offsets, speed, loading, reducedMotion, intensity =
 function GoldLightTrails({ loading, reducedMotion }) {
   const trails = useMemo(() => ([
     {
-      points: [[-8.9, -1.58, 2.35], [-7.0, -1.45, 0.6], [-5.35, -1.24, -1.55], [-3.25, -0.95, -4.85]],
-      offsets: [0.08, 0.38, 0.68],
-      speed: loading ? 0.48 : 0.22,
-      intensity: loading ? 1.22 : 1.38,
+      points: [[-8.2, -1.36, -5.2], [-6.55, -1.08, -3.65], [-5.05, -0.94, -2.3], [-3.35, -0.9, -1.2]],
+      offsets: [0.08, 0.55],
+      speed: loading ? 0.48 : 0.068,
+      intensity: loading ? 1.22 : 0.82,
     },
     {
-      points: [[8.9, -1.58, 2.35], [7.0, -1.45, 0.6], [5.35, -1.24, -1.55], [3.25, -0.95, -4.85]],
-      offsets: [0.22, 0.52, 0.82],
-      speed: loading ? 0.45 : 0.21,
-      intensity: loading ? 1.22 : 1.38,
+      points: [[8.2, -1.36, -5.2], [6.55, -1.08, -3.65], [5.05, -0.94, -2.3], [3.35, -0.9, -1.2]],
+      offsets: [0.28, 0.78],
+      speed: loading ? 0.45 : 0.062,
+      intensity: loading ? 1.22 : 0.82,
     },
     {
-      points: [[-8.8, -1.68, 2.0], [-4.8, -1.62, 0.45], [0, -1.58, -1.55], [4.8, -1.62, 0.45], [8.8, -1.68, 2.0]],
-      offsets: [0.02, 0.34, 0.66],
-      speed: loading ? 0.31 : 0.18,
-      intensity: loading ? 0.95 : 1.0,
-    },
-    {
-      points: [[-5.6, -1.62, 2.2], [-3.8, -1.48, 0.2], [-1.8, -1.2, -2.1], [-0.45, -1.02, -4.7]],
-      offsets: [0.14, 0.58],
-      speed: loading ? 0.36 : 0.2,
-      intensity: loading ? 0.95 : 0.96,
-    },
-    {
-      points: [[5.6, -1.62, 2.2], [3.8, -1.48, 0.2], [1.8, -1.2, -2.1], [0.45, -1.02, -4.7]],
-      offsets: [0.34, 0.78],
-      speed: loading ? 0.36 : 0.2,
-      intensity: loading ? 0.95 : 0.96,
+      points: [[-8.8, -1.64, -3.25], [-4.8, -1.58, -2.36], [0, -1.56, -2.05], [4.8, -1.58, -2.36], [8.8, -1.64, -3.25]],
+      offsets: [0.02, 0.5],
+      speed: loading ? 0.31 : 0.034,
+      intensity: loading ? 0.95 : 0.34,
     },
   ]), [loading]);
 
@@ -354,7 +343,6 @@ function FloatingParticles({ loading, reducedMotion }) {
   useFrame(({ clock }) => {
     if (!pointsRef.current || reducedMotion) return;
     pointsRef.current.rotation.y = Math.sin(clock.elapsedTime * 0.055) * 0.018;
-    pointsRef.current.position.y = Math.sin(clock.elapsedTime * 0.22) * 0.025;
     if (materialRef.current) {
       materialRef.current.opacity = (loading ? 0.62 : 0.07) + Math.sin(clock.elapsedTime * 0.6) * (loading ? 0.07 : 0.01);
     }
@@ -379,22 +367,7 @@ function FloatingParticles({ loading, reducedMotion }) {
 }
 
 function HazeLayer({ loading }) {
-  return (
-    <group>
-      <mesh position={[0, 0.04, -5.6]} frustumCulled={false}>
-        <planeGeometry args={[15, 7]} />
-        <meshBasicMaterial color="#806018" transparent opacity={loading ? 0.105 : 0.01} depthWrite={false} blending={AdditiveBlending} />
-      </mesh>
-      <mesh position={[-6.3, -0.65, -2.8]} rotation={[0, 0.18, 0]} frustumCulled={false}>
-        <planeGeometry args={[4.4, 2.4]} />
-        <meshBasicMaterial color={GOLD} transparent opacity={loading ? 0.12 : 0.026} depthWrite={false} blending={AdditiveBlending} />
-      </mesh>
-      <mesh position={[6.3, -0.65, -2.8]} rotation={[0, -0.18, 0]} frustumCulled={false}>
-        <planeGeometry args={[4.4, 2.4]} />
-        <meshBasicMaterial color={GOLD} transparent opacity={loading ? 0.12 : 0.026} depthWrite={false} blending={AdditiveBlending} />
-      </mesh>
-    </group>
-  );
+  return null;
 }
 
 function SceneLayers({ loading, reducedMotion }) {
@@ -402,11 +375,11 @@ function SceneLayers({ loading, reducedMotion }) {
     <>
       <DarkEnvironment loading={loading} />
       <CameraRig loading={loading} reducedMotion={reducedMotion} />
-      {loading && <HazeLayer loading={loading} />}
+      <HazeLayer loading={loading} />
       <PerspectiveGridFloor loading={loading} reducedMotion={reducedMotion} />
       <GoldLightTrails loading={loading} reducedMotion={reducedMotion} />
-      {loading && <DigitalSideDots loading={loading} reducedMotion={reducedMotion} />}
-      {loading && <FloatingParticles loading={loading} reducedMotion={reducedMotion} />}
+      <DigitalSideDots loading={loading} reducedMotion={reducedMotion} />
+      <FloatingParticles loading={loading} reducedMotion={reducedMotion} />
       <Preload all />
     </>
   );
@@ -424,7 +397,7 @@ export default function ThreeScene({ mode = "dashboard", className = "" }) {
         frameloop={frameloop}
         gl={{
           antialias: true,
-          alpha: true,
+          alpha: false,
           powerPreference: "high-performance",
         }}
         camera={{ position: [0, 1.15, 7.2], fov: 46, near: 0.1, far: 42 }}

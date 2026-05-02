@@ -267,8 +267,8 @@ function OpenTradesPanel({ trades, tradeAllowed = true }) {
                 {["Symbol", "Type", "Volume", "Open", "Current", "Profit", ""].map((h, i) => (
                   <th
                     key={i}
-                    className={`px-3 py-2.5 text-[10px] tracking-widest text-gray-600 uppercase font-medium ${
-                      i >= 3 && i < 6 ? "text-right" : i === 6 ? "w-16" : "text-left"
+                    className={`py-2.5 text-[10px] tracking-widest text-gray-600 uppercase font-medium ${
+                      i === 3 ? "w-[8ch] max-w-[8ch] px-1 text-right" : i >= 4 && i < 6 ? "px-3 text-right" : i === 6 ? "w-16 px-3" : "px-3 text-left"
                     }`}
                   >
                     {h}
@@ -292,7 +292,11 @@ function OpenTradesPanel({ trades, tradeAllowed = true }) {
                       <td className="px-3 py-2.5 text-white font-semibold">{t.symbol}</td>
                       <td className="px-3 py-2.5"><TypeBadge type={t.type} /></td>
                       <td className="px-3 py-2.5 text-gray-400">{t.volume}</td>
-                      <td className="px-3 py-2.5 text-right text-gray-500 font-mono">{t.price_open}</td>
+                      <td className="w-[8ch] max-w-[8ch] px-1 py-2.5 text-right text-gray-500 font-mono">
+                        <span className="inline-block max-w-[8ch] overflow-hidden text-ellipsis whitespace-nowrap align-bottom" title={String(t.price_open)}>
+                          {t.price_open}
+                        </span>
+                      </td>
                       <td className="px-3 py-2.5 text-right text-gray-400 font-mono">{t.price_current}</td>
                       <td className="px-3 py-2.5 text-right"><ProfitCell profit={t.profit} /></td>
                       <td className="px-3 py-2.5 text-right">

@@ -19,7 +19,7 @@ app.use(cors({
     if (env.NODE_ENV !== "production" && /^https?:\/\/localhost:\d+/.test(origin)) {
       return callback(null, true);
     }
-    if (env.ALLOW_PRIVATE_NETWORK_CORS && privateNetworkOrigin(origin)) {
+    if ((env.NODE_ENV !== "production" || env.ALLOW_PRIVATE_NETWORK_CORS) && privateNetworkOrigin(origin)) {
       return callback(null, true);
     }
 
