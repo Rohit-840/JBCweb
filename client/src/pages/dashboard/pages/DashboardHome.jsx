@@ -50,22 +50,26 @@ export default function DashboardHome({ data, connected }) {
     () => strategySymbols ? strategySymbols.map((s) => s.toUpperCase()) : null,
     [strategySymbols]
   );
+  const strategySymbolsSet = useMemo(
+    () => strategySymbolsUpper ? new Set(strategySymbolsUpper) : null,
+    [strategySymbolsUpper]
+  );
 
   // ── Filtered data for the active strategy ────────────────────────────────
   const strategyHistory = useMemo(() => {
     if (!strategySymbolsUpper) return null;
     const bySymbol = (data?.full_history || []).filter(
-      (h) => matchesStrategyRule(h, activeStrategy, strategySymbolsUpper, expertRulesByStrategy)
+      (h) => matchesStrategyRule(h, activeStrategy, strategySymbolsSet, expertRulesByStrategy)
     );
     return applyTPSLFilter(bySymbol, activeStrategy);
-  }, [strategySymbolsUpper, expertRulesByStrategy, activeStrategy, data?.full_history]);
+  }, [strategySymbolsUpper, strategySymbolsSet, expertRulesByStrategy, activeStrategy, data?.full_history]);
 
   const strategyTrades = useMemo(() => {
     if (!strategySymbolsUpper) return null;
     return (data?.trades || []).filter(
-      (t) => matchesStrategyRule(t, activeStrategy, strategySymbolsUpper, expertRulesByStrategy)
+      (t) => matchesStrategyRule(t, activeStrategy, strategySymbolsSet, expertRulesByStrategy)
     );
-  }, [strategySymbolsUpper, expertRulesByStrategy, activeStrategy, data?.trades]);
+  }, [strategySymbolsUpper, strategySymbolsSet, expertRulesByStrategy, activeStrategy, data?.trades]);
 
   const availableStrategyVolumes = useMemo(() => {
     if (!strategyHistory) return [];

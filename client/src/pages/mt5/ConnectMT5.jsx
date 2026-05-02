@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import api from "../../services/api";
 import logo from "../../assets/logo.jpeg";
@@ -25,6 +25,7 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
   const [loading,      setLoading]      = useState(false);
   const [msg,          setMsg]          = useState({ text: "", type: "info" });
   const [showHints,    setShowHints]    = useState(false);
+  const successTimer = useRef(null);
 
   const effectiveServer = server === CUSTOM_VALUE ? customServer.trim() : server;
 
@@ -59,7 +60,7 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
       } else {
         setMsg({ text: "MT5 Connected Successfully!", type: "success" });
       }
-      setTimeout(() => onSuccess(), 1200);
+      successTimer.current = setTimeout(() => onSuccess(), 1200);
 
     } catch (err) {
       setLoading(false);
@@ -94,6 +95,10 @@ export default function ConnectMT5({ onSuccess, onBack = null }) {
     msg.type === "success" ? "text-emerald-400" :
     msg.type === "error"   ? "text-red-400"     :
     "text-yellow-400";
+
+  useEffect(() => () => {
+    clearTimeout(successTimer.current);
+  }, []);
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-transparent flex items-center justify-center px-4 py-10 relative overflow-y-auto">

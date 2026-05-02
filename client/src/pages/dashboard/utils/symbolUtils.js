@@ -120,7 +120,11 @@ export const matchesStrategyRule = (
   expertRulesByStrategy = {}
 ) => {
   const symbol = item.symbol?.trim().toUpperCase();
-  if (!symbol || !strategySymbols.map((s) => s.toUpperCase()).includes(symbol)) {
+  const hasStrategySymbol = strategySymbols instanceof Set
+    ? strategySymbols.has(symbol)
+    : strategySymbols.map((s) => s.toUpperCase()).includes(symbol);
+
+  if (!symbol || !hasStrategySymbol) {
     return false;
   }
 

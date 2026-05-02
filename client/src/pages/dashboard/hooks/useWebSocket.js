@@ -22,18 +22,32 @@ export default function useWebSocket() {
   const equityHistory = useRef([]);
   const socketRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const animationFrame = useRef(null);
+  const pendingFrame = useRef(null);
+  const mounted = useRef(false);
 
   useEffect(() => {
+    mounted.current = true;
+
+    const flushPendingFrame = () => {
+      animationFrame.current = null;
+      if (!pendingFrame.current || !mounted.current) return;
+      setData(pendingFrame.current);
+      pendingFrame.current = null;
+    };
+
     function connect() {
       const ws = new WebSocket(getDashboardWsUrl());
       socketRef.current = ws;
 
       ws.onopen = () => {
+        if (!mounted.current || socketRef.current !== ws) return;
         setConnected(true);
         if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       };
 
       ws.onclose = () => {
+        if (!mounted.current || socketRef.current !== ws) return;
         setConnected(false);
         reconnectTimer.current = setTimeout(connect, 3000);
       };
@@ -49,7 +63,10 @@ export default function useWebSocket() {
               { time: Date.now(), equity: parsed.account.equity },
             ];
           }
-          setData({ ...parsed, equityHistory: [...equityHistory.current] });
+          pendingFrame.current = { ...parsed, equityHistory: [...equityHistory.current] };
+          if (!animationFrame.current) {
+            animationFrame.current = requestAnimationFrame(flushPendingFrame);
+          }
         } catch {
           // non-JSON frame — ignore
         }
@@ -58,7 +75,9 @@ export default function useWebSocket() {
 
     connect();
     return () => {
+      mounted.current = false;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
       socketRef.current?.close();
     };
   }, []);

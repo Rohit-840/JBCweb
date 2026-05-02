@@ -14,10 +14,12 @@ export default function InteractiveChart({ history = [], trades = [] }) {
     try {
       // 1. Build Closed P&L series safely
       const sortedHist = [...(history || [])].sort((a, b) => (a.time || 0) - (b.time || 0));
-      const closedSeries = sortedHist.reduce((points, d) => {
-        const previousValue = points.length > 0 ? points[points.length - 1][1] : 0;
-        return [...points, [(d.time || 0) * 1000, previousValue + (d.profit || 0)]];
-      }, []);
+      const closedSeries = [];
+      let closedCum = 0;
+      for (const d of sortedHist) {
+        closedCum += d.profit || 0;
+        closedSeries.push([(d.time || 0) * 1000, closedCum]);
+      }
 
       // 2. Build Open Positions projection safely
       const lastHistValue = closedSeries.length > 0 ? closedSeries[closedSeries.length - 1][1] : 0;
@@ -104,7 +106,7 @@ export default function InteractiveChart({ history = [], trades = [] }) {
     }
   }, [history, trades, nowMs]);
 
-  const options = {
+  const options = useMemo(() => ({
     chart: {
       type: "line",
       background: "transparent",
@@ -244,7 +246,7 @@ export default function InteractiveChart({ history = [], trades = [] }) {
         size: 6,
       }
     },
-  };
+  }), [maxX, minX, userBounds]);
 
   return (
     <div className="w-full h-full relative flex items-center justify-center min-h-[350px]">

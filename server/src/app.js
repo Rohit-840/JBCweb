@@ -7,6 +7,8 @@ import { allowedCorsOrigins, env } from "./config/env.js";
 
 const app = express();
 
+app.disable("x-powered-by");
+
 const privateNetworkOrigin = (origin = "") =>
   /^https?:\/\/192\.168\.\d+\.\d+/.test(origin) ||
   /^https?:\/\/10\.\d+\.\d+\.\d+/.test(origin) ||
@@ -29,7 +31,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/", (req, res) => {
   res.json({ name: "JBC API", status: "ok" });
@@ -46,5 +48,16 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/mt5", mt5Routes);
 app.use("/api/strategies", strategiesRoutes);
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ message: "Not allowed by CORS" });
+  }
+
+  console.error("Unhandled API error:", err.message);
+  return res.status(500).json({ message: "Internal server error" });
+});
 
 export default app;

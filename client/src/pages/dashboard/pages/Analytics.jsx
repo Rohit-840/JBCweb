@@ -1,38 +1,63 @@
+import { useMemo } from "react";
+
 export default function Analytics({ data }) {
   const analytics = data?.analytics;
-  const trades    = data?.trades       || [];
+  const trades = useMemo(() => data?.trades || [], [data?.trades]);
 
   // full_history covers 365 days and already has the position_id symbol-recovery
   // fix applied in Python, so SpotCrude and other CFD instruments appear correctly.
   // (data.history is only 7 days and used just for the analytics object server-side.)
-  const closed = data?.full_history || [];
+  const closed = useMemo(() => data?.full_history || [], [data?.full_history]);
 
-  const totalOpenProfit   = trades.reduce((s, t) => s + (t.profit || 0), 0);
-  const totalClosedProfit = closed.reduce((s, h) => s + (h.profit || 0), 0);
-  const winTrades         = closed.filter((h) => h.profit > 0);
-  const lossTrades        = closed.filter((h) => h.profit < 0);
+  const {
+    totalOpenProfit,
+    totalClosedProfit,
+    winTrades,
+    lossTrades,
+    closedBySymbol,
+    openBySymbol,
+    allSymbols,
+  } = useMemo(() => {
+    const nextClosedBySymbol = {};
+    const nextOpenBySymbol = {};
+    let nextTotalOpenProfit = 0;
+    let nextTotalClosedProfit = 0;
+    const nextWinTrades = [];
+    const nextLossTrades = [];
 
-  // Closed P&L grouped by symbol (from full 365-day history)
-  const closedBySymbol = closed.reduce((acc, h) => {
-    if (h.symbol) acc[h.symbol] = (acc[h.symbol] || 0) + h.profit;
-    return acc;
-  }, {});
+    for (const h of closed) {
+      const profit = h.profit || 0;
+      nextTotalClosedProfit += profit;
+      if (profit > 0) nextWinTrades.push(h);
+      if (profit < 0) nextLossTrades.push(h);
+      if (h.symbol) nextClosedBySymbol[h.symbol] = (nextClosedBySymbol[h.symbol] || 0) + profit;
+    }
 
-  // Open floating P&L grouped by symbol (live positions)
-  const openBySymbol = trades.reduce((acc, t) => {
-    if (t.symbol) acc[t.symbol] = (acc[t.symbol] || 0) + (t.profit || 0);
-    return acc;
-  }, {});
+    for (const t of trades) {
+      const profit = t.profit || 0;
+      nextTotalOpenProfit += profit;
+      if (t.symbol) nextOpenBySymbol[t.symbol] = (nextOpenBySymbol[t.symbol] || 0) + profit;
+    }
 
-  // All symbols across both closed and open
-  const allSymbols = [...new Set([
-    ...Object.keys(closedBySymbol),
-    ...Object.keys(openBySymbol),
-  ])].sort((a, b) => {
-    const totalA = (closedBySymbol[a] || 0) + (openBySymbol[a] || 0);
-    const totalB = (closedBySymbol[b] || 0) + (openBySymbol[b] || 0);
-    return totalB - totalA;
-  });
+    const symbols = [...new Set([
+      ...Object.keys(nextClosedBySymbol),
+      ...Object.keys(nextOpenBySymbol),
+    ])].sort((a, b) => {
+      const totalA = (nextClosedBySymbol[a] || 0) + (nextOpenBySymbol[a] || 0);
+      const totalB = (nextClosedBySymbol[b] || 0) + (nextOpenBySymbol[b] || 0);
+      return totalB - totalA;
+    });
+
+    return {
+      totalOpenProfit: nextTotalOpenProfit,
+      totalClosedProfit: nextTotalClosedProfit,
+      winTrades: nextWinTrades,
+      lossTrades: nextLossTrades,
+      closedBySymbol: nextClosedBySymbol,
+      openBySymbol: nextOpenBySymbol,
+      allSymbols: symbols,
+    };
+  }, [closed, trades]);
 
   const summary = [
     {

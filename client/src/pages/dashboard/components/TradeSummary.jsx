@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { mt5Post } from "../../../services/mt5Bridge.js";
 
 // Direct call to the Python MT5 bridge (Vite proxies /mt5 → localhost:8001)
@@ -415,18 +415,39 @@ function HistoryPanel({ history, resetKey }) {
 
 /* ── Main export ────────────────────────────────────────────────────────────── */
 export default function TradeSummary({ trades, fullHistory, strategySymbols, strategyVolumeFilter = [], tradeAllowed = true }) {
-  const symbolTrades  = strategySymbols ? trades.filter((t) => strategySymbols.includes(t.symbol))      : trades;
-  const symbolHistory = strategySymbols ? fullHistory.filter((h) => strategySymbols.includes(h.symbol)) : fullHistory;
+  const strategySymbolSet = useMemo(
+    () => strategySymbols ? new Set(strategySymbols) : null,
+    [strategySymbols]
+  );
 
-  const filteredTrades = strategyVolumeFilter.length > 0
-    ? symbolTrades.filter((t) => strategyVolumeFilter.some((v) => Math.abs(t.volume - v) < 0.0001))
-    : symbolTrades;
+  const symbolTrades = useMemo(
+    () => strategySymbolSet ? trades.filter((t) => strategySymbolSet.has(t.symbol)) : trades,
+    [trades, strategySymbolSet]
+  );
 
-  const filteredHistory = strategyVolumeFilter.length > 0
-    ? strategyVolumeFilter.flatMap((vol) => symbolHistory.filter((h) => Math.abs(h.volume - vol) < 0.0001))
-    : symbolHistory;
+  const symbolHistory = useMemo(
+    () => strategySymbolSet ? fullHistory.filter((h) => strategySymbolSet.has(h.symbol)) : fullHistory,
+    [fullHistory, strategySymbolSet]
+  );
 
-  const resetKey = JSON.stringify(strategySymbols) + JSON.stringify(strategyVolumeFilter);
+  const filteredTrades = useMemo(
+    () => strategyVolumeFilter.length > 0
+      ? symbolTrades.filter((t) => strategyVolumeFilter.some((v) => Math.abs(t.volume - v) < 0.0001))
+      : symbolTrades,
+    [symbolTrades, strategyVolumeFilter]
+  );
+
+  const filteredHistory = useMemo(
+    () => strategyVolumeFilter.length > 0
+      ? strategyVolumeFilter.flatMap((vol) => symbolHistory.filter((h) => Math.abs(h.volume - vol) < 0.0001))
+      : symbolHistory,
+    [symbolHistory, strategyVolumeFilter]
+  );
+
+  const resetKey = useMemo(
+    () => JSON.stringify(strategySymbols) + JSON.stringify(strategyVolumeFilter),
+    [strategySymbols, strategyVolumeFilter]
+  );
 
   return (
     <div className="flex flex-col md:flex-row gap-4 mt-4">

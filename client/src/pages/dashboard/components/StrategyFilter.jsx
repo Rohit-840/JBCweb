@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { Suspense, lazy, useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { STRATEGY_CONFIG, STRATEGIES, applyTPSLFilter } from "../constants.js";
 import {
@@ -11,7 +11,8 @@ import {
 } from "../utils/symbolUtils.js";
 import SymbolChart      from "./SymbolChart.jsx";
 import AddSymbolInput   from "./AddSymbolInput.jsx";
-import InteractiveChart from "./InteractiveChart.jsx";
+
+const InteractiveChart = lazy(() => import("./InteractiveChart.jsx"));
 /* helpers */
 function TypeBadge({ type }) {
   const isBuy = type === 0;
@@ -636,33 +637,35 @@ export default function StrategyFilter({
     [activeStrategy, expertRules]
   );
 
+  const popupSymbolSet = useMemo(
+    () => popup ? new Set([popup.toUpperCase()]) : null,
+    [popup]
+  );
+
   const symbolHistory = useMemo(() => {
     if (!popup) return [];
-    const upper = popup.toUpperCase();
     const bySymbol = (data?.full_history || []).filter(
-      (h) => matchesStrategyRule(h, activeStrategy, [upper], expertRules)
+      (h) => matchesStrategyRule(h, activeStrategy, popupSymbolSet, expertRules)
     );
     return applyTPSLFilter(bySymbol, activeStrategy);
-  }, [popup, activeStrategy, expertRules, data?.full_history]);
+  }, [popup, popupSymbolSet, activeStrategy, expertRules, data?.full_history]);
 
   const symbolTrades = useMemo(
     () => {
       if (!popup) return [];
-      const upper = popup.toUpperCase();
       return (data?.trades || []).filter(
-        (t) => matchesStrategyRule(t, activeStrategy, [upper], expertRules)
+        (t) => matchesStrategyRule(t, activeStrategy, popupSymbolSet, expertRules)
       );
     },
-    [popup, activeStrategy, expertRules, data?.trades]
+    [popup, popupSymbolSet, activeStrategy, expertRules, data?.trades]
   );
 
   const symbolHistoryEntries = useMemo(() => {
     if (!popup) return [];
-    const upper = popup.toUpperCase();
     return (data?.history_entries || []).filter(
-      (h) => matchesStrategyRule(h, activeStrategy, [upper], expertRules)
+      (h) => matchesStrategyRule(h, activeStrategy, popupSymbolSet, expertRules)
     );
-  }, [popup, activeStrategy, expertRules, data?.history_entries]);
+  }, [popup, popupSymbolSet, activeStrategy, expertRules, data?.history_entries]);
 
   const displayHistory = useMemo(() => {
     const raw = popupVolume.trim();
@@ -1145,10 +1148,18 @@ export default function StrategyFilter({
               </button>
             </div>
             <div className="flex-1 p-2 md:p-4 min-h-0">
-              <InteractiveChart
-                history={displayHistory}
-                trades={displayTrades}
-              />
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                    Loading chart...
+                  </div>
+                }
+              >
+                <InteractiveChart
+                  history={displayHistory}
+                  trades={displayTrades}
+                />
+              </Suspense>
             </div>
           </div>
         </div>,

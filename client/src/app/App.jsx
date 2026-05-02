@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { Suspense, lazy, useState, useEffect } from "react";
 
 import Loading         from "../pages/loading/Loading.jsx";
 import Auth            from "../pages/Auth.jsx";
 import ConnectMT5      from "../pages/mt5/ConnectMT5.jsx";
 import AccountSelector from "../pages/accounts/AccountSelector.jsx";
-import Dashboard       from "../pages/dashboard/Dashboard.jsx";
 import AppBackground   from "../components/AppBackground.jsx";
 import api             from "../services/api.js";
+
+const Dashboard = lazy(() => import("../pages/dashboard/Dashboard.jsx"));
 
 function App() {
   const [loading,         setLoading]         = useState(() => {
@@ -33,12 +34,15 @@ function App() {
   useEffect(() => {
     if (loading || !token) return;
 
+    const controller = new AbortController();
     setChecking(true);
     api
       .get("/mt5/status", {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       })
       .catch((err) => {
+        if (err.name === "CanceledError") return;
         const status = err.response?.status;
 
         if (status === 401 || status === 403) {
@@ -48,7 +52,11 @@ function App() {
           setAddingAccount(false);
         }
       })
-      .finally(() => setChecking(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setChecking(false);
+      });
+
+    return () => controller.abort();
   }, [loading, token]);
 
   const renderApp = () => {
@@ -79,13 +87,15 @@ function App() {
     }
 
     return (
-      <Dashboard
-        onLogout={logout}
-        onSwitchAccount={() => {
-          localStorage.removeItem("accountSelected");
-          setAccountSelected(false);
-        }}
-      />
+      <Suspense fallback={null}>
+        <Dashboard
+          onLogout={logout}
+          onSwitchAccount={() => {
+            localStorage.removeItem("accountSelected");
+            setAccountSelected(false);
+          }}
+        />
+      </Suspense>
     );
   };
 

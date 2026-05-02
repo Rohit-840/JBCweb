@@ -304,27 +304,46 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
   const [fetchError,   setFetchError]   = useState("");   // persistent — needs manual retry
   const [deleteError,  setDeleteError]  = useState("");   // transient — auto-clears
   const deleteErrorTimer = useRef(null);
+  const snapshotController = useRef(null);
 
   const email = localStorage.getItem("userEmail") || "";
 
   const fetchSnapshot = useCallback(async () => {
+    snapshotController.current?.abort();
+    const controller = new AbortController();
+    snapshotController.current = controller;
     setLoading(true);
     setFetchError("");
     try {
       const { data } = await api.post(
         "/mt5/snapshot",
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        }
       );
       setAccounts(data.accounts);
-    } catch {
-      setFetchError("Failed to load account data. Please retry.");
+    } catch (err) {
+      if (err.name !== "CanceledError") {
+        setFetchError("Failed to load account data. Please retry.");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
+      if (snapshotController.current === controller) {
+        snapshotController.current = null;
+      }
     }
   }, [token]);
 
-  useEffect(() => { fetchSnapshot(); }, [fetchSnapshot]);
+  useEffect(() => {
+    fetchSnapshot();
+  }, [fetchSnapshot]);
+
+  useEffect(() => () => {
+    snapshotController.current?.abort();
+    clearTimeout(deleteErrorTimer.current);
+  }, []);
 
   const handleSelect = async (accountId) => {
     setSelecting(accountId);

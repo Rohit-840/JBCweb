@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Line, Preload } from "@react-three/drei";
@@ -101,7 +102,7 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
-function CameraRig({ reducedMotion, loading }) {
+function CameraRig() {
   const { camera } = useThree();
   const target = useMemo(() => new Vector3(0, -0.72, -1.2), []);
 
@@ -366,7 +367,7 @@ function FloatingParticles({ loading, reducedMotion }) {
   );
 }
 
-function HazeLayer({ loading }) {
+function HazeLayer() {
   return null;
 }
 
@@ -374,7 +375,7 @@ function SceneLayers({ loading, reducedMotion }) {
   return (
     <>
       <DarkEnvironment loading={loading} />
-      <CameraRig loading={loading} reducedMotion={reducedMotion} />
+      <CameraRig />
       <HazeLayer loading={loading} />
       <PerspectiveGridFloor loading={loading} reducedMotion={reducedMotion} />
       <GoldLightTrails loading={loading} reducedMotion={reducedMotion} />

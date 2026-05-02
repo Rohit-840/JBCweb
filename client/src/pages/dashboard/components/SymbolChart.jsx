@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 
 function buildHistPts(history) {
   if (!history || history.length === 0) return [];
@@ -52,7 +52,7 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
   const chartH = height - padT - padB;
 
   // ── History cumulative P&L ─────────────────────────────────────────────────
-  const histPts = buildHistPts(history);
+  const histPts = useMemo(() => buildHistPts(history), [history]);
   const hasHist = histPts.length >= 2;
 
   // ── Open positions stepped projection ─────────────────────────────────────
@@ -61,21 +61,22 @@ export default function SymbolChart({ history, trades = [], height = 260 }) {
   const totalOpenPnl  = trades.reduce((s, t) => s + (t.profit || 0), 0);
   const hasOpen       = trades.length > 0;
 
-  const sortedTrades = hasOpen ? [...trades].sort((a, b) => a.time - b.time) : [];
-  let openPts = [];
-  if (hasOpen) {
+  const openPts = useMemo(() => {
+    if (!hasOpen) return [];
+    const sortedTrades = [...trades].sort((a, b) => a.time - b.time);
     let cum = lastHistValue;
-    openPts = [{ time: lastHistTime, value: cum }];
+    const points = [{ time: lastHistTime, value: cum }];
     for (const t of sortedTrades) {
       const tTime = Math.max(t.time, lastHistTime);
-      if (openPts[openPts.length - 1].time < tTime)
-        openPts.push({ time: tTime, value: cum });
+      if (points[points.length - 1].time < tTime)
+        points.push({ time: tTime, value: cum });
       cum += t.profit || 0;
-      openPts.push({ time: tTime, value: cum });
+      points.push({ time: tTime, value: cum });
     }
-    if (openPts[openPts.length - 1].time < now)
-      openPts.push({ time: now, value: cum });
-  }
+    if (points[points.length - 1].time < now)
+      points.push({ time: now, value: cum });
+    return points;
+  }, [hasOpen, trades, lastHistTime, lastHistValue, now]);
 
   // ── Combined scale — always include 0 in the value range ──────────────────
   const allVals = [0, ...histPts.map(p => p.value), ...openPts.map(p => p.value)];

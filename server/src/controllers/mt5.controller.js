@@ -8,7 +8,7 @@ const PYTHON = env.PYTHON_SERVICE_URL;
 // ─── List accounts (no passwords exposed) ────────────────────────────────────
 export const getAccounts = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("mt5Accounts");
+    const user = await User.findById(req.user.id).select("mt5Accounts").lean();
     const accounts = user.mt5Accounts.map((acc) => ({
       id: String(acc._id),
       login: acc.login,
@@ -174,7 +174,7 @@ export const closeAllTrades = async (req, res) => {
 
 export const getMT5Status = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("mt5Accounts");
+    const user = await User.findById(req.user.id).select("mt5Accounts").lean();
     res.json({ hasAccounts: user.mt5Accounts.length > 0 });
   } catch {
     res.status(500).json({ message: "Failed to fetch MT5 status" });

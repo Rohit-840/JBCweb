@@ -9,7 +9,7 @@ export const signup = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const exist = await User.findOne({ email });
+    const exist = await User.findOne({ email }).select("_id").lean();
     if (exist) return res.status(400).json({ message: "User exists" });
 
     const hashed = await bcrypt.hash(password, 10);
@@ -32,7 +32,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("email password").lean();
     if (!user) return res.status(400).json({ message: "Invalid email" });
 
     const match = await bcrypt.compare(password, user.password);

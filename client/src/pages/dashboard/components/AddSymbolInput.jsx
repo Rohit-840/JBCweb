@@ -16,6 +16,7 @@ export default function AddSymbolInput({
   const [dropPos,  setDropPos]  = useState({});
   const inputRef = useRef(null);
   const wrapRef  = useRef(null);
+  const flashTimer = useRef(null);
 
   // sorted suggestions: startsWith matches first, then contains
   const matches = useMemo(() => {
@@ -57,9 +58,14 @@ export default function AddSymbolInput({
     if (ok !== false) {
       setValue("");
       setFlash(true);
-      setTimeout(() => setFlash(false), 1500);
+      clearTimeout(flashTimer.current);
+      flashTimer.current = setTimeout(() => setFlash(false), 1500);
     }
   };
+
+  useEffect(() => () => {
+    clearTimeout(flashTimer.current);
+  }, []);
 
   const pick = (sym) => { setDropOpen(false); setCursor(-1); doSubmit(sym); };
 
