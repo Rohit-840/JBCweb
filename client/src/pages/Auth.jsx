@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { ArrowRight, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 import logo from "../assets/new3.webp";
 import api from "../services/api";
+import { GlassPanel, MotionButton } from "../components/ui/visual.jsx";
 
 export default function Auth({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -19,11 +18,7 @@ export default function Auth({ onLogin }) {
       setMsg("");
 
       const endpoint = isLogin ? "/auth/login" : "/auth/signup";
-
-      const payload = isLogin
-        ? { email, password }
-        : { name, email, password };
-
+      const payload = isLogin ? { email, password } : { name, email, password };
       const res = await api.post(endpoint, payload);
 
       if (isLogin) {
@@ -34,64 +29,51 @@ export default function Auth({ onLogin }) {
         setMsg("Account created successfully.");
         setIsLogin(true);
       }
-
     } catch (err) {
       if (!err.response) {
         setMsg("Cannot reach API server. Make sure backend is running on this network URL.");
       } else {
         setMsg(err.response?.data?.message || "Something went wrong");
       }
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleSubmit();
-    }
+    if (e.key === "Enter") handleSubmit();
   };
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-transparent flex items-center justify-center px-4 py-10 relative overflow-y-auto">
-
-      {/* Glow Effects */}
-      <div className="absolute w-[350px] h-[350px] bg-yellow-500/10 blur-3xl rounded-full top-0 left-0" />
-      <div className="absolute w-[350px] h-[350px] bg-yellow-500/10 blur-3xl rounded-full bottom-0 right-0" />
-
-      <motion.div
+      <GlassPanel
         initial={{ opacity: 0, scale: 0.92 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md bg-[#0b0b0b] border border-yellow-500/20 
-        rounded-3xl p-8 shadow-[0_0_50px_rgba(255,215,0,0.12)] relative z-10"
+        className="w-full max-w-md p-7 sm:p-8 relative z-10"
       >
-
-        {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <img
             src={logo}
-            alt="logo"
-            className="w-24 h-24 object-cover rounded-full border border-yellow-500/30 shadow-lg"
+            alt="JB Crownstone"
+            className="w-24 h-24 object-cover rounded-full border border-yellow-500/30 shadow-[0_0_30px_rgba(245,197,66,0.12)]"
           />
 
           <h1 className="mt-4 text-3xl font-semibold text-yellow-400 tracking-wide">
             JB Crownstone
           </h1>
 
-          <p className="text-gray-400 text-sm mt-1 tracking-[0.25em] uppercase">
+          <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-yellow-500/15 bg-yellow-500/[0.04] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-yellow-400/70">
+            <Sparkles className="h-3 w-3" />
             Private Client Portal
-          </p>
+          </div>
         </div>
 
-        {/* Toggle */}
-        <div className="flex bg-[#111] rounded-xl p-1 mb-8 border border-yellow-500/10">
+        <div className="flex bg-white/[0.04] rounded-lg p-1 mb-8 border border-yellow-500/10">
           <button
             onClick={() => setIsLogin(true)}
-            className={`w-1/2 py-2 rounded-lg transition ${
-              isLogin
-                ? "bg-yellow-500 text-black font-semibold"
-                : "text-gray-400"
+            className={`w-1/2 py-2 rounded-md transition ${
+              isLogin ? "bg-yellow-500 text-black font-semibold" : "text-gray-400 hover:text-gray-200"
             }`}
           >
             Login
@@ -99,37 +81,29 @@ export default function Auth({ onLogin }) {
 
           <button
             onClick={() => setIsLogin(false)}
-            className={`w-1/2 py-2 rounded-lg transition ${
-              !isLogin
-                ? "bg-yellow-500 text-black font-semibold"
-                : "text-gray-400"
+            className={`w-1/2 py-2 rounded-md transition ${
+              !isLogin ? "bg-yellow-500 text-black font-semibold" : "text-gray-400 hover:text-gray-200"
             }`}
           >
             Sign Up
           </button>
         </div>
 
-        {/* Heading */}
         <div className="mb-6 text-center">
           <h2 className="text-white text-3xl font-semibold">
             {isLogin ? "Welcome Back" : "Create Account"}
           </h2>
-
           <p className="text-gray-400 mt-2">
-            {isLogin
-              ? "Sign in to access your dashboard"
-              : "Join the premium client portal"}
+            {isLogin ? "Sign in to access your dashboard" : "Join the premium client portal"}
           </p>
         </div>
 
-        {/* Form */}
         <div className="space-y-4">
-
           {!isLogin && (
             <input
               type="text"
               placeholder="Full Name"
-              className="w-full bg-[#101010] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500"
+              className="ui-input w-full px-4 py-3 outline-none"
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -139,7 +113,7 @@ export default function Auth({ onLogin }) {
           <input
             type="email"
             placeholder="Email Address"
-            className="w-full bg-[#101010] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500"
+            className="ui-input w-full px-4 py-3 outline-none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -148,37 +122,36 @@ export default function Auth({ onLogin }) {
           <input
             type="password"
             placeholder="Password"
-            className="w-full bg-[#101010] border border-yellow-500/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500"
+            className="ui-input w-full px-4 py-3 outline-none"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={handleKeyDown}
           />
         </div>
 
-        {/* Message */}
         {msg && (
           <p className="text-center text-sm text-yellow-400 mt-4">
             {msg}
           </p>
         )}
 
-        {/* Button */}
-        <button
-          onClick={handleSubmit}
-          className="w-full mt-6 py-3 rounded-xl bg-yellow-500 text-black font-semibold hover:scale-[1.02] transition"
-        >
-          {loading
-            ? "Please wait..."
-            : isLogin
-            ? "Login →"
-            : "Create Account →"}
-        </button>
+        <MotionButton onClick={handleSubmit} className="w-full mt-6 py-3" disabled={loading}>
+          {loading ? (
+            "Please wait..."
+          ) : (
+            <>
+              {isLogin ? <LockKeyhole className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+              {isLogin ? "Login" : "Create Account"}
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
+        </MotionButton>
 
-        {/* Footer */}
-        <p className="text-center text-gray-500 text-sm mt-8">
+        <p className="text-center text-gray-500 text-sm mt-8 flex items-center justify-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-emerald-400/70" />
           Protected by enterprise-grade encryption.
         </p>
-      </motion.div>
+      </GlassPanel>
     </div>
   );
 }

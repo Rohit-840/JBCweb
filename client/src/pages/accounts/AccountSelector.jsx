@@ -1,9 +1,26 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Loader2,
+  LogOut,
+  Plus,
+  RefreshCcw,
+  Server,
+  Trash2,
+  WalletCards,
+} from "lucide-react";
 import api from "../../services/api";
 import logo from "../../assets/new3.webp";
+import {
+  GlassPanel,
+  LiveBadge,
+  MetricValue,
+  MotionButton,
+} from "../../components/ui/visual.jsx";
+import { itemVariants, listVariants } from "../../components/ui/motion.js";
 
-// helpers
 const fmt = (n) =>
   new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
@@ -11,52 +28,41 @@ const fmt = (n) =>
   }).format(n ?? 0);
 
 const pnlColor = (n) => (n >= 0 ? "text-emerald-400" : "text-red-400");
-const pnlSign  = (n) => (n >= 0 ? "+" : "");
+const pnlTone = (n) => (n >= 0 ? "positive" : "negative");
+const pnlSign = (n) => (n >= 0 ? "+" : "");
 
-// skeleton card
 function SkeletonCard({ index }) {
   return (
-    <motion.div
+    <GlassPanel
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.07 }}
-      className="rounded-2xl border border-white/5 bg-[#0d0d0d] p-6 space-y-5"
+      className="p-6 space-y-5 min-h-[260px]"
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
-          <div className="h-2 w-20 rounded-full bg-white/[0.06] animate-pulse" />
-          <div className="h-5 w-28 rounded-full bg-white/[0.06] animate-pulse" />
-          <div className="h-2 w-36 rounded-full bg-white/[0.04] animate-pulse" />
+          <div className="h-2 w-20 rounded-full bg-white/[0.07] animate-pulse" />
+          <div className="h-5 w-28 rounded-full bg-white/[0.07] animate-pulse" />
+          <div className="h-2 w-36 rounded-full bg-white/[0.05] animate-pulse" />
         </div>
-        <div className="h-6 w-16 rounded-full bg-white/[0.06] animate-pulse" />
+        <div className="h-6 w-16 rounded-full bg-white/[0.07] animate-pulse" />
       </div>
       <div className="space-y-3">
-        <div>
-          <div className="h-2 w-12 rounded-full bg-white/[0.04] mb-2 animate-pulse" />
-          <div className="h-8 w-36 rounded-lg bg-white/[0.06] animate-pulse" />
-          <div className="h-2 w-24 rounded-full bg-white/[0.04] mt-1.5 animate-pulse" />
-        </div>
-        <div>
-          <div className="h-2 w-20 rounded-full bg-white/[0.04] mb-2 animate-pulse" />
-          <div className="h-6 w-28 rounded-lg bg-white/[0.06] animate-pulse" />
-        </div>
+        <div className="h-8 w-36 rounded-lg bg-white/[0.07] animate-pulse" />
+        <div className="h-6 w-28 rounded-lg bg-white/[0.06] animate-pulse" />
       </div>
-      <div className="h-10 w-full rounded-xl bg-white/[0.06] animate-pulse" />
-    </motion.div>
+      <div className="h-10 w-full rounded-lg bg-white/[0.07] animate-pulse" />
+    </GlassPanel>
   );
 }
 
-// account card
 function AccountCard({ account, index, onSelect, onDelete, selecting }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting,      setDeleting]      = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isSelecting = selecting === account.id;
-  const disabled    = !!selecting;
-  const offline     = account.success === false;
-
-  const openConfirm = (e) => { e.stopPropagation(); setConfirmDelete(true); };
-  const closeConfirm = (e) => { e.stopPropagation(); setConfirmDelete(false); };
+  const disabled = !!selecting;
+  const offline = account.success === false;
 
   const confirmAndDelete = async (e) => {
     e.stopPropagation();
@@ -67,242 +73,177 @@ function AccountCard({ account, index, onSelect, onDelete, selecting }) {
   };
 
   return (
-    <motion.div
+    <GlassPanel
       layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}
-      transition={{ delay: index * 0.07, duration: 0.4 }}
+      interactive={!offline && !disabled}
+      variants={itemVariants}
+      initial="initial"
+      animate="animate"
+      exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.18 } }}
+      transition={{ delay: index * 0.04, duration: 0.36 }}
       onClick={() => !offline && !disabled && !confirmDelete && onSelect(account.id)}
       className={[
-        "group relative rounded-2xl border p-6 flex flex-col gap-5 overflow-hidden transition-all duration-300",
-        offline
-          ? "border-white/5 bg-[#0d0d0d] opacity-50 cursor-not-allowed"
-          : disabled
-          ? "border-yellow-500/20 bg-[#0d0d0d] cursor-wait"
-          : "border-yellow-500/15 bg-[#0d0d0d] cursor-pointer hover:border-yellow-500/40 hover:bg-[#111] hover:shadow-[0_0_40px_rgba(255,215,0,0.05)]",
+        "group p-5 sm:p-6 flex flex-col gap-5 min-h-[260px]",
+        offline ? "opacity-55 cursor-not-allowed" : disabled ? "cursor-wait" : "cursor-pointer",
       ].join(" ")}
     >
-      {/* hover glow */}
-      {!offline && (
-        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-yellow-500/[0.03] to-transparent pointer-events-none" />
-      )}
-
-      {/* delete confirmation overlay */}
       <AnimatePresence>
         {confirmDelete && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="absolute inset-0 z-20 rounded-2xl bg-[#0d0d0d]
-              flex flex-col items-center justify-center gap-5 px-6"
+            transition={{ duration: 0.16 }}
+            className="absolute inset-0 z-20 bg-[#070807]/95 backdrop-blur-md flex flex-col items-center justify-center gap-5 px-6"
             onClick={(e) => e.stopPropagation()}
           >
-        {/* warning icon */}
-            <div className="w-14 h-14 rounded-full bg-red-500/20 border-2 border-red-500/60 flex items-center justify-center">
-              <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              </svg>
+            <div className="w-12 h-12 rounded-lg bg-red-500/15 border border-red-500/35 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
             </div>
-
             <div className="text-center">
               <p className="text-white font-semibold text-sm mb-1">Remove this account?</p>
               <p className="text-gray-300 text-xs font-medium">#{account.login}</p>
-              <p className="text-gray-500 text-[11px] mt-0.5 truncate max-w-[180px]">{account.server}</p>
+              <p className="text-gray-500 text-[11px] mt-0.5 truncate max-w-[200px]">{account.server}</p>
             </div>
-
             <div className="flex gap-3 w-full">
-              <button
-                onClick={closeConfirm}
+              <MotionButton
+                variant="ghost"
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
                 disabled={deleting}
-                className="flex-1 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-semibold
-                  hover:bg-white/15 hover:border-white/30 transition-all duration-200 disabled:opacity-50"
+                className="flex-1 py-2.5 text-xs"
               >
                 Cancel
-              </button>
-              <button
+              </MotionButton>
+              <MotionButton
+                variant="danger"
                 onClick={confirmAndDelete}
                 disabled={deleting}
-                className="flex-1 py-3 rounded-xl bg-red-600 border border-red-500 text-white text-xs font-semibold
-                  hover:bg-red-500 transition-all duration-200 flex items-center justify-center gap-1.5 disabled:opacity-60"
+                className="flex-1 py-2.5 text-xs"
               >
-                {deleting ? (
-                  <>
-                    <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeDashoffset="10" />
-                    </svg>
-                    Removing…
-                  </>
-                ) : (
-                  "Remove"
-                )}
-              </button>
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {deleting ? "Removing..." : "Remove"}
+              </MotionButton>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold tracking-[0.18em] text-yellow-500/50 uppercase mb-1">
+          <p className="text-[10px] font-bold tracking-[0.18em] text-yellow-500/55 uppercase mb-1">
             Pepperstone MT5
           </p>
           <p className="text-white font-bold text-xl tracking-wide">#{account.login}</p>
-          <p className="text-gray-500 text-xs mt-0.5 truncate max-w-[160px]">{account.server}</p>
+          <p className="text-gray-500 text-xs mt-0.5 truncate max-w-[180px]">{account.server}</p>
         </div>
 
-        {/* status badge and delete button stacked */}
         <div className="flex flex-col items-end gap-2 shrink-0">
-          {offline ? (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-              <span className="text-[10px] font-semibold text-red-400">Offline</span>
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-semibold text-emerald-400">Live</span>
-            </span>
-          )}
-
-          {/* trash button, always visible, subtle until hovered */}
+          <LiveBadge active={!offline} label={offline ? "Offline" : "Live"} />
           <button
-            onClick={openConfirm}
+            onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
             title="Remove account"
-            className="flex items-center gap-1 px-2 py-1 rounded-lg
-              text-gray-600 hover:text-red-400 text-[10px] font-medium
-              border border-transparent hover:border-red-500/20 hover:bg-red-500/10
-              transition-all duration-200"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 text-[10px] font-medium border border-transparent hover:border-red-500/20 hover:bg-red-500/10 transition-all"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
+            <Trash2 className="w-3 h-3" />
             Remove
           </button>
         </div>
       </div>
 
-      {/* stats */}
-      {!offline && (
+      {!offline ? (
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-[10px] tracking-widest text-gray-600 uppercase mb-1">Equity</p>
-            <p className="text-2xl font-bold text-white leading-none">${fmt(account.equity)}</p>
+            <p className="text-2xl font-bold text-white leading-none">
+              <MetricValue value={`$${fmt(account.equity)}`} />
+            </p>
             <p className="text-[11px] text-gray-600 mt-1">Bal: ${fmt(account.balance)}</p>
           </div>
           <div>
             <p className="text-[10px] tracking-widest text-gray-600 uppercase mb-1">Floating P&amp;L</p>
-            <p className={`text-2xl font-bold leading-none ${pnlColor(account.profit)}`}>
-              {pnlSign(account.profit)}${fmt(account.profit)}
+            <p className="text-2xl font-bold leading-none">
+              <MetricValue
+                tone={pnlTone(account.profit)}
+                value={`${pnlSign(account.profit)}$${fmt(account.profit)}`}
+              />
             </p>
             <p className="text-[11px] text-gray-600 mt-1">
-              {account.leverage ? `1:${account.leverage} leverage` : "—"}
+              {account.leverage ? `1:${account.leverage} leverage` : "No leverage data"}
             </p>
           </div>
         </div>
-      )}
-
-      {offline && (
+      ) : (
         <p className="text-xs text-gray-600">{account.error || "Connection unavailable"}</p>
       )}
 
-      {/* cta */}
       {!offline && (
-        <button
-          disabled={disabled}
-          className={[
-            "w-full py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200",
-            isSelecting
-              ? "bg-yellow-500/15 text-yellow-400/70 cursor-wait"
-              : disabled
-              ? "bg-yellow-500/10 text-yellow-400/40"
-              : "bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98]",
-          ].join(" ")}
-        >
+        <MotionButton disabled={disabled} className="w-full mt-auto py-2.5">
           {isSelecting ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeDashoffset="10" />
-              </svg>
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
               Entering...
-            </span>
+            </>
           ) : (
-            "Enter Dashboard →"
+            <>
+              Enter Dashboard
+              <ArrowRight className="h-4 w-4" />
+            </>
           )}
-        </button>
+        </MotionButton>
       )}
-    </motion.div>
+    </GlassPanel>
   );
 }
 
-// add account card
 function AddAccountCard({ onAdd, index }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.4 }}
+    <GlassPanel
+      interactive
+      variants={itemVariants}
+      initial="initial"
+      animate="animate"
+      transition={{ delay: index * 0.04, duration: 0.36 }}
       onClick={onAdd}
-      className="group rounded-2xl border-2 border-dashed border-yellow-500/20 bg-[#0d0d0d]
-        p-6 flex flex-col items-center justify-center gap-4 min-h-[260px]
-        cursor-pointer hover:border-yellow-500/40 hover:bg-[#111]
-        transition-all duration-300"
+      className="group p-6 flex flex-col items-center justify-center gap-4 min-h-[260px] border-dashed"
     >
-      <div
-        className="w-14 h-14 rounded-full flex items-center justify-center
-          border border-yellow-500/25 bg-yellow-500/[0.07]
-          group-hover:border-yellow-500/50 group-hover:bg-yellow-500/15
-          transition-all duration-300"
-      >
-        <svg
-          className="w-5 h-5 text-yellow-500/50 group-hover:text-yellow-400 transition-colors duration-300"
-          fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
+      <div className="w-14 h-14 rounded-lg flex items-center justify-center border border-yellow-500/25 bg-yellow-500/[0.07] group-hover:border-yellow-500/50 group-hover:bg-yellow-500/15 transition-all">
+        <Plus className="w-5 h-5 text-yellow-400" />
       </div>
       <div className="text-center">
-        <p className="text-white/55 group-hover:text-white/90 text-sm font-semibold tracking-wide transition-colors duration-300">
+        <p className="text-white/70 group-hover:text-white text-sm font-semibold tracking-wide transition-colors">
           Add Account
         </p>
         <p className="text-gray-600 text-xs mt-1.5">Connect another MT5 account</p>
       </div>
-    </motion.div>
+    </GlassPanel>
   );
 }
 
-//  aggregate stat card 
 function StatCard({ label, value, sub, colored, delay }) {
   return (
-    <motion.div
+    <GlassPanel
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="relative rounded-2xl border border-yellow-500/20 bg-[#0d0d0d] p-6 overflow-hidden"
+      className="p-5 sm:p-6"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/[0.025] to-transparent pointer-events-none" />
-      <p className="text-[10px] font-bold tracking-[0.18em] text-yellow-500/50 uppercase mb-3 relative z-10">
+      <p className="text-[10px] font-bold tracking-[0.18em] text-yellow-500/55 uppercase mb-3">
         {label}
       </p>
-      <p className={`text-3xl sm:text-4xl font-bold tracking-tight relative z-10 ${colored}`}>
-        {value}
+      <p className={`text-3xl sm:text-4xl font-bold tracking-tight ${colored}`}>
+        <MetricValue value={value} tone={colored.includes("emerald") ? "positive" : colored.includes("red") ? "negative" : "neutral"} />
       </p>
-      <p className="text-gray-600 text-xs mt-2 relative z-10">{sub}</p>
-    </motion.div>
+      <p className="text-gray-600 text-xs mt-2">{sub}</p>
+    </GlassPanel>
   );
 }
 
-// main component 
 export default function AccountSelector({ token, onSelect, onAddAccount, onLogout }) {
-  const [accounts,     setAccounts]     = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [selecting,    setSelecting]    = useState(null);
-  const [fetchError,   setFetchError]   = useState("");   // persistent — needs manual retry
-  const [deleteError,  setDeleteError]  = useState("");   // transient — auto-clears
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selecting, setSelecting] = useState(null);
+  const [fetchError, setFetchError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const deleteErrorTimer = useRef(null);
   const snapshotController = useRef(null);
 
@@ -360,7 +301,6 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
     }
   };
 
-  // delete only removes from this site + MongoDB
   const handleDelete = async (accountId) => {
     if (!accountId) return;
     try {
@@ -370,69 +310,62 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
       );
       setAccounts((prev) => prev.filter((a) => a.id !== accountId));
     } catch {
-      // Show transient error, auto-dismiss after 4 s
       setDeleteError("Failed to remove account. Please try again.");
       clearTimeout(deleteErrorTimer.current);
       deleteErrorTimer.current = setTimeout(() => setDeleteError(""), 4000);
     }
   };
 
-  const live        = accounts.filter((a) => a.success !== false);
-  const totalEquity = live.reduce((s, a) => s + (a.equity  ?? 0), 0);
-  const totalPnl    = live.reduce((s, a) => s + (a.profit  ?? 0), 0);
+  const live = accounts.filter((a) => a.success !== false);
+  const totalEquity = live.reduce((s, a) => s + (a.equity ?? 0), 0);
+  const totalPnl = live.reduce((s, a) => s + (a.profit ?? 0), 0);
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-transparent relative overflow-y-auto">
-      {/* ambient glows */}
-      <div className="fixed pointer-events-none w-[700px] h-[700px] rounded-full bg-yellow-500/[0.025] blur-[140px] -top-60 -left-60" />
-      <div className="fixed pointer-events-none w-[700px] h-[700px] rounded-full bg-yellow-500/[0.025] blur-[140px] -bottom-60 -right-60" />
-
-      {/* navbar */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0a0a]/90 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-yellow-500/15 bg-[#050605]/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={logo}
               alt="JB Crownstone"
               className="w-7 h-7 rounded-full object-cover border border-yellow-500/30"
             />
-            <span className="text-yellow-400 font-bold tracking-[0.16em] text-xs uppercase">
+            <span className="text-yellow-400 font-bold tracking-[0.16em] text-xs uppercase truncate">
               JB Crownstone
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-gray-600 text-xs truncate max-w-[200px]">{email}</span>
-            <button
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="hidden sm:block text-gray-600 text-xs truncate max-w-[220px]">{email}</span>
+            <MotionButton
+              variant="ghost"
               onClick={onLogout}
-              className="px-3 py-1.5 rounded-lg border border-white/10 text-gray-500 text-xs
-                hover:border-red-500/30 hover:text-red-400 transition-all duration-200"
+              className="px-3 py-1.5 text-xs"
             >
+              <LogOut className="h-3.5 w-3.5" />
               Logout
-            </button>
+            </MotionButton>
           </div>
         </div>
       </nav>
 
       <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 pb-16">
-
-        {/* page header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-10"
+          className="mb-8"
         >
-          <p className="text-[10px] font-bold tracking-[0.22em] text-yellow-500/50 uppercase mb-2">
-            Pepperstone 
+          <p className="text-[10px] font-bold tracking-[0.22em] text-yellow-500/55 uppercase mb-2 flex items-center gap-2">
+            <Server className="h-3.5 w-3.5" />
+            Pepperstone
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             Select Account
           </h1>
           <p className="text-gray-500 text-sm mt-2">
-            Choose a trading account to enter the dashboard
+            Choose a trading account to enter the dashboard.
           </p>
         </motion.div>
 
-        {/*  fetch / select error (persistent, retry refetches)  */}
         <AnimatePresence>
           {fetchError && (
             <motion.div
@@ -441,20 +374,17 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
               exit={{ opacity: 0, height: 0 }}
               className="mb-6 overflow-hidden"
             >
-              <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                 <span>{fetchError}</span>
-                <button
-                  onClick={fetchSnapshot}
-                  className="shrink-0 px-3 py-1 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-xs font-semibold transition-colors"
-                >
+                <MotionButton variant="danger" onClick={fetchSnapshot} className="shrink-0 px-3 py-1 text-xs">
+                  <RefreshCcw className="h-3.5 w-3.5" />
                   Retry
-                </button>
+                </MotionButton>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* delete error (transient, auto-dismisses) */}
         <AnimatePresence>
           {deleteError && (
             <motion.div
@@ -463,23 +393,24 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
               exit={{ opacity: 0, height: 0 }}
               className="mb-6 overflow-hidden"
             >
-              <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                 <span>{deleteError}</span>
-                <button
-                  onClick={() => setDeleteError("")}
-                  className="shrink-0 px-3 py-1 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-xs font-semibold transition-colors"
-                >
+                <MotionButton variant="danger" onClick={() => setDeleteError("")} className="shrink-0 px-3 py-1 text-xs">
                   Dismiss
-                </button>
+                </MotionButton>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* aggregate totals */}
         <AnimatePresence>
           {!loading && live.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+            <motion.div
+              variants={listVariants}
+              initial="initial"
+              animate="animate"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8"
+            >
               <StatCard
                 label="Total Equity"
                 value={`$${fmt(totalEquity)}`}
@@ -494,13 +425,13 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
                 colored={pnlColor(totalPnl)}
                 delay={0.14}
               />
-            </div>
+            </motion.div>
           )}
         </AnimatePresence>
 
-        {/* section label */}
         <div className="flex items-center justify-between mb-5">
-          <p className="text-[10px] font-bold tracking-[0.22em] text-gray-600 uppercase">
+          <p className="text-[10px] font-bold tracking-[0.22em] text-gray-600 uppercase flex items-center gap-2">
+            <WalletCards className="h-3.5 w-3.5" />
             Your Accounts
           </p>
           {!loading && accounts.length === 0 && (
@@ -508,8 +439,12 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
           )}
         </div>
 
-        {/* account grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <motion.div
+          variants={listVariants}
+          initial="initial"
+          animate="animate"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
           {loading ? (
             [0, 1, 2].map((i) => <SkeletonCard key={i} index={i} />)
           ) : (
@@ -529,7 +464,7 @@ export default function AccountSelector({ token, onSelect, onAddAccount, onLogou
               <AddAccountCard onAdd={onAddAccount} index={accounts.length} />
             </>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

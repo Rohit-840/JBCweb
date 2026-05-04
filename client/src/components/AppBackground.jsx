@@ -1,5 +1,6 @@
 import dashboardBackground from "../assets/fordb.png";
 import frontBackground from "../assets/front.png";
+import ThreeScene from "./ThreeScene.jsx";
 
 const traces = Array.from({ length: 14 }, (_, index) => index + 1);
 const nodes = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -16,6 +17,7 @@ export default function AppBackground({ variant = "front" }) {
       {isDashboard ? (
         <>
           <img className="app-bg__image app-bg__image--dashboard" src={dashboardBackground} alt="" />
+          <ThreeScene mode="dashboard" />
           <div className="dashboard-bg-effects">
             {dashboardLines.map((line) => (
               <span key={`dashboard-line-${line}`} className={`dashboard-bg-line dashboard-bg-line--${line}`} />
@@ -28,6 +30,7 @@ export default function AppBackground({ variant = "front" }) {
       ) : (
         <>
           <img className="app-bg__image" src={frontBackground} alt="" />
+          <ThreeScene mode="front" />
           <div className="app-bg__motion">
             {traces.map((trace) => (
               <span key={`trace-${trace}`} className={`app-bg__trace app-bg__trace--${trace}`} />

@@ -416,7 +416,7 @@ export default function EquityChart({ fullHistory, account, strategyData, strate
                     const last = accountSeries.svgPts[accountSeries.svgPts.length - 1];
                     return (
                       <>
-                        <circle cx={last.x} cy={last.y} r="5" fill="#d4af37" fillOpacity="0.12" />
+                        <circle className="dashboard-chart-pulse" cx={last.x} cy={last.y} r="5" fill="#d4af37" fillOpacity="0.12" />
                         <circle cx={last.x} cy={last.y} r="2.5" fill="#d4af37" stroke="#0d0d0d" strokeWidth="1.5" />
                       </>
                     );
@@ -426,7 +426,7 @@ export default function EquityChart({ fullHistory, account, strategyData, strate
                     const last = strategySeries.svgPts[strategySeries.svgPts.length - 1];
                     return (
                       <>
-                        <circle cx={last.x} cy={last.y} r="6" fill="#22c55e" fillOpacity="0.12" />
+                        <circle className="dashboard-chart-pulse" cx={last.x} cy={last.y} r="6" fill="#22c55e" fillOpacity="0.12" />
                         <circle cx={last.x} cy={last.y} r="3" fill="#22c55e" stroke="#0d0d0d" strokeWidth="1.5" />
                       </>
                     );
@@ -450,7 +450,7 @@ export default function EquityChart({ fullHistory, account, strategyData, strate
                     const last = svgPts[svgPts.length - 1];
                     return (
                       <>
-                        <circle cx={last.x} cy={last.y} r="6" fill={lineColor} fillOpacity="0.12" />
+                        <circle className="dashboard-chart-pulse" cx={last.x} cy={last.y} r="6" fill={lineColor} fillOpacity="0.12" />
                         <circle cx={last.x} cy={last.y} r="3" fill={lineColor} stroke="#0d0d0d" strokeWidth="1.5" />
                       </>
                     );

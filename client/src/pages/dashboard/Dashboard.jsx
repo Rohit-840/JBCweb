@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { AnimatePresence } from "framer-motion";
+import { Menu } from "lucide-react";
 import Sidebar from "./components/Sidebar.jsx";
 import DashboardHome from "./pages/DashboardHome.jsx";
 import OpenTrades from "./pages/OpenTrades.jsx";
@@ -6,6 +8,7 @@ import History from "./pages/History.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Profile from "./pages/Profile.jsx";
 import useWebSocket from "./hooks/useWebSocket.js";
+import { AnimatedPage, LiveBadge } from "../../components/ui/visual.jsx";
 
 export default function Dashboard({ onLogout, onSwitchAccount }) {
   const [page, setPage]           = useState(localStorage.getItem("dashboard_page") || "dashboard");
@@ -50,10 +53,9 @@ export default function Dashboard({ onLogout, onSwitchAccount }) {
 
   return (
     <div className="dashboard-workspace flex h-screen h-[100dvh] bg-transparent overflow-hidden">
-      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/65 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebar(false)}
         />
       )}
@@ -68,22 +70,23 @@ export default function Dashboard({ onLogout, onSwitchAccount }) {
       />
 
       <main className="dashboard-main flex-1 overflow-y-auto min-w-0">
-        {/* Mobile top bar */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0d0d0d] sticky top-0 z-30">
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-yellow-500/15 bg-[#050605]/85 backdrop-blur-xl sticky top-0 z-30">
           <button
             onClick={() => setSidebar(true)}
-            className="w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg
-              bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+            className="w-9 h-9 flex items-center justify-center rounded-lg
+              bg-white/5 border border-white/10 hover:border-yellow-500/30 transition-all text-gray-300"
           >
-            <span className="w-4 h-px bg-gray-400" />
-            <span className="w-4 h-px bg-gray-400" />
-            <span className="w-4 h-px bg-gray-400" />
+            <Menu className="h-4 w-4" />
           </button>
           <p className="text-xs font-bold tracking-widest text-yellow-400">CROWNSTONE</p>
-          <div className={`w-2 h-2 rounded-full ${connected ? "bg-green-400 animate-pulse" : "bg-red-500"}`} />
+          <LiveBadge active={connected} label={connected ? "Live" : "Off"} className="scale-90 origin-right" />
         </div>
 
-        {renderPage()}
+        <AnimatePresence mode="wait">
+          <AnimatedPage key={page} className="min-h-full">
+            {renderPage()}
+          </AnimatedPage>
+        </AnimatePresence>
       </main>
     </div>
   );

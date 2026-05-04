@@ -102,9 +102,10 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
-function CameraRig({ reducedMotion, loading }) {
+function CameraRig({ reducedMotion, loading, mode }) {
   const { camera } = useThree();
   const target = useMemo(() => new Vector3(0, -0.72, -1.2), []);
+  const pointerRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     camera.position.set(0, 1.15, 7.2);
@@ -115,28 +116,43 @@ function CameraRig({ reducedMotion, loading }) {
     camera.updateProjectionMatrix();
   }, [camera, target]);
 
+  useEffect(() => {
+    if (reducedMotion) return undefined;
+
+    const handlePointer = (event) => {
+      pointerRef.current.x = (event.clientX / window.innerWidth - 0.5) * 2;
+      pointerRef.current.y = (event.clientY / window.innerHeight - 0.5) * 2;
+    };
+
+    window.addEventListener("pointermove", handlePointer, { passive: true });
+    return () => window.removeEventListener("pointermove", handlePointer);
+  }, [reducedMotion]);
+
   useFrame(({ clock }) => {
     if (reducedMotion) return;
 
     const t = clock.elapsedTime;
-    const sway = loading ? 0.075 : 0.028;
-    camera.position.x = Math.sin(t * 0.16) * sway;
-    camera.position.y = 1.15 + Math.sin(t * 0.11) * sway * 0.35;
+    const pointerWeight = mode === "front" ? 0.11 : 0.065;
+    const sway = loading ? 0.075 : mode === "front" ? 0.038 : 0.024;
+    camera.position.x = Math.sin(t * 0.16) * sway + pointerRef.current.x * pointerWeight;
+    camera.position.y = 1.15 + Math.sin(t * 0.11) * sway * 0.35 - pointerRef.current.y * pointerWeight * 0.2;
     camera.lookAt(target);
   });
 
   return null;
 }
 
-function DarkEnvironment({ loading }) {
+function DarkEnvironment({ loading, mode }) {
+  const dashboard = mode === "dashboard";
+
   return (
     <>
       {loading && <color attach="background" args={[BLACK]} />}
-      <fog attach="fog" args={["#050505", loading ? 8.4 : 5.2, loading ? 20 : 15]} />
-      <ambientLight intensity={loading ? 0.42 : 0.11} color="#d4af37" />
-      <pointLight position={[-6.1, -0.72, -2.45]} intensity={loading ? 42 : 10} color={GOLD} distance={loading ? 9.5 : 6.4} />
-      <pointLight position={[6.1, -0.72, -2.45]} intensity={loading ? 42 : 10} color={GOLD} distance={loading ? 9.5 : 6.4} />
-      <pointLight position={[0, -1.2, -3.8]} intensity={loading ? 9 : 1.1} color="#8d6c18" distance={loading ? 11 : 6.8} />
+      <fog attach="fog" args={["#050505", loading ? 8.4 : dashboard ? 5.6 : 5.2, loading ? 20 : 15]} />
+      <ambientLight intensity={loading ? 0.42 : dashboard ? 0.13 : 0.16} color="#d4af37" />
+      <pointLight position={[-6.1, -0.72, -2.45]} intensity={loading ? 42 : dashboard ? 9 : 13} color={GOLD} distance={loading ? 9.5 : 6.4} />
+      <pointLight position={[6.1, -0.72, -2.45]} intensity={loading ? 42 : dashboard ? 9 : 13} color={GOLD} distance={loading ? 9.5 : 6.4} />
+      <pointLight position={[0, -1.2, -3.8]} intensity={loading ? 9 : dashboard ? 1.1 : 1.8} color="#8d6c18" distance={loading ? 11 : 6.8} />
     </>
   );
 }
@@ -398,16 +414,16 @@ function HazeLayer({ loading }) {
   );
 }
 
-function SceneLayers({ loading, reducedMotion }) {
+function SceneLayers({ mode, loading, reducedMotion }) {
   return (
     <>
-      <DarkEnvironment loading={loading} />
-      <CameraRig loading={loading} reducedMotion={reducedMotion} />
+      <DarkEnvironment loading={loading} mode={mode} />
+      <CameraRig loading={loading} reducedMotion={reducedMotion} mode={mode} />
       {loading && <HazeLayer loading={loading} />}
       <PerspectiveGridFloor loading={loading} reducedMotion={reducedMotion} />
       <GoldLightTrails loading={loading} reducedMotion={reducedMotion} />
-      {loading && <DigitalSideDots loading={loading} reducedMotion={reducedMotion} />}
-      {loading && <FloatingParticles loading={loading} reducedMotion={reducedMotion} />}
+      {(loading || mode === "front") && <DigitalSideDots loading={loading} reducedMotion={reducedMotion} />}
+      {(loading || mode === "front") && <FloatingParticles loading={loading} reducedMotion={reducedMotion} />}
       <Preload all />
     </>
   );
@@ -417,12 +433,14 @@ export default function ThreeScene({ mode = "dashboard", className = "" }) {
   const reducedMotion = usePrefersReducedMotion();
   const loading = mode === "loading";
   const frameloop = reducedMotion ? "demand" : "always";
+  const dpr = loading ? [1, 1.5] : [0.8, 1.25];
 
   return (
-    <div className={`three-scene ${className}`} aria-hidden="true">
+    <div className={`three-scene three-scene--${mode} ${className}`} aria-hidden="true">
       <Canvas
-        dpr={[1, 1.5]}
+        dpr={dpr}
         frameloop={frameloop}
+        fallback={<div className="three-scene__fallback" />}
         gl={{
           antialias: true,
           alpha: true,
@@ -430,7 +448,7 @@ export default function ThreeScene({ mode = "dashboard", className = "" }) {
         }}
         camera={{ position: [0, 1.15, 7.2], fov: 46, near: 0.1, far: 42 }}
       >
-        <SceneLayers loading={loading} reducedMotion={reducedMotion} />
+        <SceneLayers mode={mode} loading={loading} reducedMotion={reducedMotion} />
       </Canvas>
     </div>
   );

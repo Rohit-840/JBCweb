@@ -254,7 +254,7 @@ export default function InteractiveChart({ history = [], trades = [] }) {
         {userBounds && (
           <button
             onClick={() => setUserBounds(null)}
-            className="absolute top-2 right-32 z-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs px-3 py-1.5 rounded shadow-lg transition-colors duration-200"
+            className="absolute top-2 right-32 z-10 bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/30 text-yellow-300 text-xs px-3 py-1.5 rounded-lg shadow-lg transition-colors duration-200"
           >
             Resume Live Tracking
           </button>

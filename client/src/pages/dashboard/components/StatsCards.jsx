@@ -1,5 +1,10 @@
+import { createElement } from "react";
+import { Activity, Banknote, CircleDollarSign, Landmark, Wallet } from "lucide-react";
+import { GlassPanel, MetricValue } from "../../../components/ui/visual.jsx";
+import { itemVariants } from "../../../components/ui/motion.js";
+
 function fmt(value) {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "-";
   return `$${Number(value).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -7,27 +12,41 @@ function fmt(value) {
 }
 
 const CARDS = [
-  { key: "balance",     label: "BALANCE",     color: () => "text-white" },
-  { key: "equity",      label: "EQUITY",      color: () => "text-green-400" },
-  { key: "profit",      label: "PROFIT",      color: (v) => v < 0 ? "text-red-400" : "text-green-400" },
-  { key: "margin",      label: "MARGIN",      color: () => "text-yellow-400" },
-  { key: "free_margin", label: "FREE MARGIN", color: () => "text-yellow-400" },
+  { key: "balance", label: "BALANCE", color: () => "text-white", icon: Landmark, tone: () => "neutral" },
+  { key: "equity", label: "EQUITY", color: () => "text-green-400", icon: Wallet, tone: () => "positive" },
+  {
+    key: "profit",
+    label: "PROFIT",
+    color: (v) => v < 0 ? "text-red-400" : "text-green-400",
+    icon: Activity,
+    tone: (v) => v < 0 ? "negative" : "positive",
+  },
+  { key: "margin", label: "MARGIN", color: () => "text-yellow-400", icon: CircleDollarSign, tone: () => "gold" },
+  { key: "free_margin", label: "FREE MARGIN", color: () => "text-yellow-400", icon: Banknote, tone: () => "gold" },
 ];
 
 export default function StatsCards({ account }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-      {CARDS.map(({ key, label, color }) => {
+      {CARDS.map(({ key, label, color, icon: Icon, tone }) => {
         const value = account?.[key];
+        const numericValue = Number(value) || 0;
         return (
-          <div key={key} className="dashboard-stat-card bg-[#111] rounded-xl p-4 border border-white/5">
-            <p className="text-[10px] tracking-[0.2em] text-gray-500 uppercase mb-2">
-              {label}
+          <GlassPanel
+            key={key}
+            variants={itemVariants}
+            className="dashboard-stat-card p-4"
+          >
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-[10px] tracking-[0.2em] text-gray-500 uppercase">
+                {label}
+              </p>
+              {createElement(Icon, { className: "h-4 w-4 text-yellow-400/45" })}
+            </div>
+            <p className={`text-lg font-bold ${color(numericValue)}`}>
+              <MetricValue value={fmt(value)} tone={tone(numericValue)} />
             </p>
-            <p className={`text-lg font-bold ${color(Number(value) || 0)}`}>
-              {fmt(value)}
-            </p>
-          </div>
+          </GlassPanel>
         );
       })}
     </div>
